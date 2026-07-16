@@ -97,10 +97,8 @@
         console.log('Inserting Bitrix loader script into container');
         script.src = loaderBase + '?' + ((Date.now() / 180000) | 0);
 
-        // Insert before first script tag per original snippet
-        const first = document.getElementsByTagName('script')[0];
-        if (first && first.parentNode) first.parentNode.insertBefore(script, first);
-        else container.appendChild(script);
+        // Append the loader directly into the container to avoid placement issues
+        container.appendChild(script);
 
         window.addEventListener('b24:form:init', function(ev){
           try{
