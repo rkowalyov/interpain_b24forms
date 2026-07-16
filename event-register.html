@@ -87,7 +87,28 @@
         script.setAttribute('data-b24-form', 'inline/739/0zko7k');
         script.setAttribute('data-skip-moving', 'true');
         // integer chunk like original snippet
-        script.src = loaderBase + '?' + ((Date.now() / 180000) | 0);
+        // If the page was rendered with an escaped script (e.g. &lt;script ...&gt;), try to repair it
+        const rawContainer = container.innerHTML || '';
+        if (rawContainer.indexOf('&lt;script') !== -1 || rawContainer.indexOf('loader_739') !== -1) {
+          try{
+            console.log('Repairing escaped Bitrix script in container');
+            // try to extract src and data-b24-form from the escaped markup
+            const srcMatch = rawContainer.match(/src=(?:"|')([^"']*loader_739[^"']*)(?:"|')/i);
+            const dataMatch = rawContainer.match(/data-b24-form=(?:"|')([^"']*)(?:"|')/i);
+            if (srcMatch && srcMatch[1]) {
+              script.src = srcMatch[1] + '?' + ((Date.now() / 180000) | 0);
+            } else {
+              script.src = loaderBase + '?' + ((Date.now() / 180000) | 0);
+            }
+            if (dataMatch && dataMatch[1]) script.setAttribute('data-b24-form', dataMatch[1]);
+            // clear escaped content
+            container.innerHTML = '';
+          }catch(e){
+            script.src = loaderBase + '?' + ((Date.now() / 180000) | 0);
+          }
+        } else {
+          script.src = loaderBase + '?' + ((Date.now() / 180000) | 0);
+        }
 
         // Insert before first script tag per original snippet
         const first = document.getElementsByTagName('script')[0];
@@ -105,6 +126,44 @@
             form.setProperty('EVENT_CITY', eventCity || '');
           }catch(e){console.error('b24:init handler error',e)}
         });
+
+        // Fallback: poll for the Bitrix form object and call setProperty when it becomes available.
+        (function fallbackSetProperties(){
+          function trySet(form){
+            try{
+              if (!form || typeof form.setProperty !== 'function') return false;
+              form.setProperty('EVPASSPORT_ID', id);
+              form.setProperty('EVENT_NAME', eventName || `Мероприятие №${id}`);
+              form.setProperty('EVENT_DATE', eventDate || '');
+              form.setProperty('EVENT_CITY', eventCity || '');
+              return true;
+            }catch(e){return false}
+          }
+
+          // First try common locations
+          if (trySet(window.BX24 && window.BX24.form)) return;
+
+          // Poll for up to ~10 seconds
+          let attempts = 0;
+          const maxAttempts = 20;
+          const interval = setInterval(() => {
+            attempts += 1;
+            // Check common globals or previously emitted event detail
+            if (trySet(window.BX24 && window.BX24.form)) { clearInterval(interval); return; }
+
+            // Sometimes the form API is attached under other internal objects — try to discover setProperty on window
+            for (const k in window) {
+              try{
+                const v = window[k];
+                if (v && typeof v === 'object' && typeof v.setProperty === 'function'){
+                  if (trySet(v)) { clearInterval(interval); return; }
+                }
+              }catch(e){}
+            }
+
+            if (attempts >= maxAttempts) clearInterval(interval);
+          }, 500);
+        })();
       }
     })();
   </script>
