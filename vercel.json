@@ -24,6 +24,10 @@
       "dest": "/api/lead.js"
     },
     {
+      "src": "^/api/event/(.*)$",
+      "dest": "/api/event.js?id=$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/$1"
     }
