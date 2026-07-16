@@ -76,14 +76,23 @@
       function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c]))}
 
       function loadB24(){
-        const B24_LOADER = window.B24_LOADER_URL || 'https://cdn.bitrix24.ru/b12345/crm/form/loader.js';
+        // Use provided loader URL (from Bitrix24 embed). If `window.B24_LOADER_URL` is set, use it.
+        const loaderBase = window.B24_LOADER_URL || 'https://cdn-ru.bitrix24.ru/b16533649/crm/form/loader_739.js';
         const container = document.getElementById('b24form_container');
+
+        // Insert script using Bitrix recommended pattern with cache-busting timestamp
+        // <script data-b24-form="inline/739/0zko7k" data-skip-moving="true" src="...?{ts}"></script>
         const script = document.createElement('script');
-        script.src = B24_LOADER;
         script.async = true;
-        script.onload = function(){
-        };
-        container.appendChild(script);
+        script.setAttribute('data-b24-form', 'inline/739/0zko7k');
+        script.setAttribute('data-skip-moving', 'true');
+        // integer chunk like original snippet
+        script.src = loaderBase + '?' + ((Date.now() / 180000) | 0);
+
+        // Insert before first script tag per original snippet
+        const first = document.getElementsByTagName('script')[0];
+        if (first && first.parentNode) first.parentNode.insertBefore(script, first);
+        else container.appendChild(script);
 
         window.addEventListener('b24:form:init', function(ev){
           try{
