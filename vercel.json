@@ -6,6 +6,7 @@
     { "src": "scenarios/*.json", "use": "@vercel/static" }
   ],
   "routes": [
+    { "src": "^/event-register/?$", "dest": "/event-register.html" },
     { "src": "^/api/lead/?$", "dest": "/api/lead.js" },
     { "src": "/api/(.*)", "dest": "/api/$1" },
     { "src": "/(.*)", "dest": "/$1" }

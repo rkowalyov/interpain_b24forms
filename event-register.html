@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Регистрация на мероприятие</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;color:#111}
+    body{margin:0;background:#f7f7f8;padding:24px;display:flex;align-items:flex-start;justify-content:center}
+    .card{max-width:720px;width:100%;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(16,24,40,.08);padding:24px}
+    h1{font-size:20px;margin:0 0 12px}
+    .meta{color:#444;margin:6px 0}
+    .error{color:#b00020;background:#fff0f1;padding:12px;border-radius:6px}
+    .hint{color:#666;font-size:14px;margin-top:8px}
+    #b24form_container{margin-top:18px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 id="title">Регистрация на мероприятие</h1>
+    <div id="info" class="meta"></div>
+    <div id="error" class="error" style="display:none"></div>
+    <div id="b24form_container"></div>
+    <div class="hint">Если форма не загружается — свяжитесь с организатором.</div>
+  </div>
+
+  <script>
+    (function(){
+      const params = new URLSearchParams(location.search);
+      const id = params.get('EVPASSPORT_ID');
+      const titleEl = document.getElementById('title');
+      const infoEl = document.getElementById('info');
+      const errorEl = document.getElementById('error');
+      let eventName = '';
+      let eventDate = '';
+      let eventCity = '';
+
+      if (!id) {
+        errorEl.textContent = 'Ошибка: параметр EVPASSPORT_ID не указан в URL.';
+        errorEl.style.display = 'block';
+        titleEl.textContent = 'Регистрация на мероприятие';
+        return;
+      }
+
+      titleEl.textContent = `Регистрация на мероприятие №${id}`;
+
+      const API_BASE = window.EVENT_API_BASE || '/api/event';
+      const apiUrl = `${API_BASE}/${encodeURIComponent(id)}`;
+
+      fetch(apiUrl, {credentials:'same-origin'})
+        .then(resp => {
+          if (!resp.ok) throw new Error('API response ' + resp.status);
+          return resp.json();
+        })
+        .then(data => {
+          eventName = data.name || data.title || '';
+          eventDate = data.date || data.event_date || '';
+          eventCity = data.city || data.location || '';
+          if (eventName) titleEl.textContent = `Регистрация: ${eventName}`;
+          const parts = [];
+          if (eventDate) parts.push(`Дата: ${formatDate(eventDate)}`);
+          if (eventCity) parts.push(`Город: ${escapeHtml(eventCity)}`);
+          infoEl.textContent = parts.join(' • ');
+        })
+        .catch(err => {
+          console.warn('Event API unavailable:', err);
+        })
+        .finally(() => {
+          loadB24();
+        });
+
+      function formatDate(d){
+        try{const dt=new Date(d); if (isNaN(dt)) return d; return dt.toLocaleString('ru-RU',{day:'2-digit',month:'long',year:'numeric'});}catch(e){return d}
+      }
+
+      function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c]))}
+
+      function loadB24(){
+        const B24_LOADER = window.B24_LOADER_URL || 'https://cdn.bitrix24.ru/b12345/crm/form/loader.js';
+        const container = document.getElementById('b24form_container');
+        const script = document.createElement('script');
+        script.src = B24_LOADER;
+        script.async = true;
+        script.onload = function(){
+        };
+        container.appendChild(script);
+
+        window.addEventListener('b24:form:init', function(ev){
+          try{
+            const detail = ev && ev.detail;
+            const form = (detail && (detail[0] || detail.form)) || detail || window.BX24 && window.BX24.form;
+            if (!form || typeof form.setProperty !== 'function') return;
+            form.setProperty('EVPASSPORT_ID', id);
+            form.setProperty('EVENT_NAME', eventName || `Мероприятие №${id}`);
+            form.setProperty('EVENT_DATE', eventDate || '');
+            form.setProperty('EVENT_CITY', eventCity || '');
+          }catch(e){console.error('b24:init handler error',e)}
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
