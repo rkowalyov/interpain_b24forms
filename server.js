@@ -45,6 +45,11 @@ app.get('/api/event/:id', (req, res) => {
   res.json(payload);
 });
 
+// Serve friendly route for event-register
+app.get(['/event-register', '/event-register/'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'event-register.html'));
+});
+
 app.post('/api/lead', async (req, res) => {
   const webhook = process.env.BITRIX_WEBHOOK;
   if (!webhook) return res.status(500).json({ error: 'webhook missing' });
