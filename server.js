@@ -34,6 +34,17 @@ app.use(express.static(path.join(__dirname)));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
+// Mock endpoint for event data (used for local testing)
+app.get('/api/event/:id', (req, res) => {
+  const id = req.params.id;
+  // Simple mock data — replace with real API integration as needed
+  const sample = {
+    '845': { name: 'Конференция InterPain 2026', date: '2026-09-15', city: 'Москва' }
+  };
+  const payload = sample[id] || { name: `Мероприятие №${id}`, date: '', city: '' };
+  res.json(payload);
+});
+
 app.post('/api/lead', async (req, res) => {
   const webhook = process.env.BITRIX_WEBHOOK;
   if (!webhook) return res.status(500).json({ error: 'webhook missing' });
