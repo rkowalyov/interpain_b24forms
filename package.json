@@ -1,0 +1,20 @@
+{
+  "name": "interpain_b24forms",
+  "version": "0.1.0",
+  "description": "Proxy to forward quiz leads to Bitrix24 for interpain_b24forms",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.7.0",
+    "helmet": "^6.0.1"
+  }
+}
