@@ -20,6 +20,10 @@
       "dest": "/event-register.html"
     },
     {
+      "src": "^/api/loader/?$",
+      "dest": "/api/loader.js"
+    },
+    {
       "src": "^/api/lead/?$",
       "dest": "/api/lead.js"
     },
