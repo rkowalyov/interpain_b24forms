@@ -1,11 +1,11 @@
-# ОТЛАДКА: Как проверить передачу EVPASSPORT_ID
+# ОТЛАДКА: Как проверить передачу EVNUMBER
 
 ## 🎯 Важное открытие!
 
 **Параметр приходит как 0, потому что:**
 - ✅ Параметр УСПЕШНО передаётся в Bitrix
 - ✅ Параметр УСПЕШНО добавляется в FormData
-- ❌ **Но поле EVPASSPORT_ID настроено как "Целое число" (Integer)**
+- ❌ **Но поле EVNUMBER настроено как "Целое число" (Integer)**
 - ❌ **А числовые поля требуют особого обращения**
 
 **Решение:** Смотрите [PARAMETER_TRANSMISSION_FIX.md](PARAMETER_TRANSMISSION_FIX.md)
@@ -14,7 +14,7 @@
 
 1. **Откройте Bitrix администратор:** https://вашдомен.bitrix24site.ru/admin/
 2. **Перейдите:** CRM → Каналы → Формы
-3. **Отредактируйте форму** и найдите поле **EVPASSPORT_ID**
+3. **Отредактируйте форму** и найдите поле **EVNUMBER**
 4. **Измените тип** с "**Целое число**" на "**Текст**"
 5. **Сохраните**
 
@@ -24,7 +24,7 @@
 
 ### 1️⃣ Откройте URL с параметром
 ```
-https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=845
+https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=845
 ```
 
 ### 2️⃣ Нажмите F12 для открытия DevTools
@@ -44,9 +44,9 @@ https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=845
 
 | Что искать | Значение |
 |-----------|---------|
-| `🔗 Added EVPASSPORT_ID to URL` | ✅ Параметр добавлен в URL Bitrix запроса |
+| `🔗 Added EVNUMBER to URL` | ✅ Параметр добавлен в URL Bitrix запроса |
 | `✅ Added params to FormData` | ✅ Параметры добавлены в тело запроса |
-| `🔍 Checking for potential EVPASSPORT fields...` | Ищем поля где можно разместить параметр |
+| `🔍 Checking for potential EVNUMBER fields...` | Ищем поля где можно разместить параметр |
 | `📝 Form has X input fields:` | Структура формы Bitrix |
 | `[X] name="..."` | Имена всех полей в Bitrix форме |
 
@@ -54,7 +54,7 @@ https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=845
 
 Последняя версия теперь:
 
-1. **Добавляет EVPASSPORT_ID в URL параметры** Bitrix запроса
+1. **Добавляет EVNUMBER в URL параметры** Bitrix запроса
 2. **Пытается заполнить дополнительные поля** (PHONE, паспорт и т.п.)
 3. **Логирует ВСЕ поля формы** чтобы мы видели структуру
 4. **Проверяет альтернативные API** (setFieldValue и т.д.)
@@ -65,7 +65,7 @@ https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=845
 2. Отправьте эту информацию:
    - Список всех `name="..."` полей из `📝 Form has X input fields:`
    - Какой из новых логов появился?
-   - Видите ли `🔍 Checking for potential EVPASSPORT fields...`?
+   - Видите ли `🔍 Checking for potential EVNUMBER fields...`?
 
 ## Возможные решения
 
@@ -73,7 +73,7 @@ https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=845
 Решение: Узнать от Bitrix какие поля они принимают
 
 ### Вариант 2: Нужна предварительная конфигурация в Bitrix CRM
-Решение: Добавить кастомное поле EVPASSPORT_ID в Bitrix admin
+Решение: Добавить кастомное поле EVNUMBER в Bitrix admin
 
 ### Вариант 3: Параметр должен быть передан при загрузке скрипта
 Решение: Передать через специальный механизм Bitrix (например data attributes)

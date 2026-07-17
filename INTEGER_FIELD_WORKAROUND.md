@@ -1,8 +1,8 @@
-# 🔢 Решение: EVPASSPORT_ID как числовое поле
+# 🔢 Решение: EVNUMBER как числовое поле
 
 ## Проблема
 
-Если поле `EVPASSPORT_ID` в Bitrix настроено как **"Целое число"** и вы **не можете изменить тип**, нужно использовать специальный подход.
+Если поле `EVNUMBER` в Bitrix настроено как **"Целое число"** и вы **не можете изменить тип**, нужно использовать специальный подход.
 
 ## ✅ Решение
 
@@ -10,7 +10,7 @@
 
 ### Способ 1: Через URL параметры (РАБОТАЕТ)
 ```
-https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=845
+https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=845
 ```
 
 **Как это работает:**
@@ -19,11 +19,11 @@ https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=845
 - Значение попадает в числовое поле как `845` (не как строка)
 
 ### Способ 2: Проверить название поля в Bitrix
-Возможно, поле в Bitrix названо не `EVPASSPORT_ID`, а иначе:
-- `EVNUMBER` 
+Возможно, поле в Bitrix названо не `EVNUMBER`, а иначе:
+- `EVPASSPORT_ID` 
 - `PASSPORT_NUMBER`
 - `PASSPORT_ID`
-- `UF_EVPASSPORT_ID` (с префиксом UF)
+- `UF_EVNUMBER` (с префиксом UF)
 - Что-то другое
 
 **Как узнать:**
@@ -46,25 +46,25 @@ https://вашдомен.bitrix24site.ru/ваша_форма/?EVPASSPORT_ID=845
 ### Проверка 1: Убедитесь что число передается
 В консоли браузера (F12 → Console) должно быть:
 ```
-ℹ️ EVPASSPORT_ID received: 845 (parsed as number: 845)
+ℹ️ EVNUMBER received: 845 (parsed as number: 845)
 ```
 
 ### Проверка 2: Убедитесь что число в URL не encoded
 ```
 ✅ Правильно: 
-https://.../?EVPASSPORT_ID=845
+https://.../?EVNUMBER=845
 
 ❌ Неправильно:
-https://.../?EVPASSPORT_ID=%20845 (пробел)
-https://.../?EVPASSPORT_ID=0845 (ведущий ноль)
-https://.../?EVPASSPORT_ID=%68 (hex encoding)
+https://.../?EVNUMBER=%20845 (пробел)
+https://.../?EVNUMBER=0845 (ведущий ноль)
+https://.../?EVNUMBER=%68 (hex encoding)
 ```
 
 ### Проверка 3: Смотрите логи отправки
 В консоли при отправке формы ищите:
 ```
-🔗 Added EVPASSPORT_ID to URL as number: 845 (direct value, no encoding)
-✅ Added params to FormData (EVPASSPORT_ID as string: 845, type: string)
+🔗 Added EVNUMBER to URL as number: 845 (direct value, no encoding)
+✅ Added params to FormData (EVNUMBER as string: 845, type: string)
 ```
 
 Если этого нет - параметр не передается.
@@ -87,7 +87,7 @@ https://.../?EVPASSPORT_ID=%68 (hex encoding)
 ## ⚙️ Что происходит в коде
 
 1. **При загрузке страницы:**
-   - Извлекается параметр `EVPASSPORT_ID` из URL
+   - Извлекается параметр `EVNUMBER` из URL
    - Парсится как число: `parseInt(idStr, 10)`
    - Сохраняется в переменную `id`
 
@@ -106,7 +106,7 @@ https://.../?EVPASSPORT_ID=%68 (hex encoding)
 ## 🎯 Главное правило
 
 **Для числовых полей в Bitrix:**
-- URL: передавайте как число без кавычек и символов: `?EVPASSPORT_ID=845`
+- URL: передавайте как число без кавычек и символов: `?EVNUMBER=845`
 - FormData: может быть как строка или число - Bitrix сам разберется
 - Важно: НЕ использовать encoding для URL параметров числовых полей
 
@@ -121,15 +121,15 @@ https://.../?EVPASSPORT_ID=%68 (hex encoding)
 
 ### ✅ Правильные примеры:
 ```
-https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=845
-https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=229
-https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=100
+https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=845
+https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=229
+https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=100
 ```
 
 ### ❌ Неправильные примеры:
 ```
-https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=%20845 (пробел в начале)
-https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=0845 (ведущий ноль)
-https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=%68%34%35 (hex)
-https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=845 (неправильное имя)
+https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=%20845 (пробел в начале)
+https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=0845 (ведущий ноль)
+https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=%68%34%35 (hex)
+https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=845 (неправильное имя)
 ```

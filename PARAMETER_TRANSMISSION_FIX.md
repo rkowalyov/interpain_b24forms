@@ -1,13 +1,13 @@
-# 🔧 РЕШЕНИЕ: Передача EVPASSPORT_ID в Bitrix
+# 🔧 РЕШЕНИЕ: Передача EVNUMBER в Bitrix
 
 ## 🎯 Обнаруженная проблема
 
 **Симптомы:**
-- Параметр EVPASSPORT_ID передаётся ✅
+- Параметр EVNUMBER передаётся ✅
 - Но в Bitrix приходит значение **0** ❌
 
 **Корневая причина:**
-Параметр `EVPASSPORT_ID` в форме Bitrix настроен как тип поля **"Целое число"** (Integer)
+Параметр `EVNUMBER` в форме Bitrix настроен как тип поля **"Целое число"** (Integer)
 
 ## ✅ Решение
 
@@ -17,7 +17,7 @@
 1. Откройте администратор Bitrix: https://вашдомен.bitrix24site.ru/admin/
 2. Перейдите в **CRM** → **Каналы** → **Формы**
 3. Найдите вашу форму и нажмите **Редактировать**
-4. Найдите поле **EVPASSPORT_ID**
+4. Найдите поле **EVNUMBER**
 5. **Измените тип** с "Целое число" на **"Текст"** или **"Строка"**
 6. Сохраните изменения
 
@@ -41,25 +41,25 @@
 
 ```bash
 # Правильно (только цифры):
-?EVPASSPORT_ID=845
-?EVPASSPORT_ID=229
+?EVNUMBER=845
+?EVNUMBER=229
 
 # Неправильно (будет ошибка):
-?EVPASSPORT_ID=0845        (ведущий ноль)
-?EVPASSPORT_ID=845a        (буква)
-?EVPASSPORT_ID=845%20229   (пробел/символ)
+?EVNUMBER=0845        (ведущий ноль)
+?EVNUMBER=845a        (буква)
+?EVNUMBER=845%20229   (пробел/символ)
 ```
 
 ### Проверка в консоли
 
 Откройте F12 → Console и посмотрите строку:
 ```
-ℹ️ EVPASSPORT_ID received: 845 (parsed as number: 845)
+ℹ️ EVNUMBER received: 845 (parsed as number: 845)
 ```
 
 Если вместо этого видите:
 ```
-❌ Invalid EVPASSPORT_ID: null (parsed as: null)
+❌ Invalid EVNUMBER: null (parsed as: null)
 ```
 
 Значит параметр не передан вообще - проверьте URL.

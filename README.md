@@ -3,16 +3,16 @@
 
 ## Event register page
 
-A simple external registration page is available at `/event-register` and expects the query param `EVPASSPORT_ID`.
+A simple external registration page is available at `/event-register` and expects the query param `EVNUMBER`.
 
 Example URL:
 
-	https://your-domain.ru/event-register/?EVPASSPORT_ID=845
+	https://your-domain.ru/event-register/?EVNUMBER=845
 
 Configuration options (optional):
 
 - `window.B24_LOADER_URL` — override Bitrix24 loader script URL if needed (default loader URL is used otherwise).
-- `window.EVENT_API_BASE` — base URL used to fetch event data; default is `/api/event`. The page requests `EVENT_API_BASE/{EVPASSPORT_ID}` and expects JSON `{ name, date, city }`.
+- `window.EVENT_API_BASE` — base URL used to fetch event data; default is `/api/event`. The page requests `EVENT_API_BASE/{EVNUMBER}` and expects JSON `{ name, date, city }`.
 
-The page will set hidden form properties on `b24:form:init` using `form.setProperty`: `EVPASSPORT_ID`, `EVENT_NAME`, `EVENT_DATE`, `EVENT_CITY`.
+The page will set hidden form properties on `b24:form:init` using `form.setProperty`: `EVNUMBER`, `EVENT_NAME`, `EVENT_DATE`, `EVENT_CITY`.
 

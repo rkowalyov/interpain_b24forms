@@ -22,7 +22,7 @@
     <div id="info" class="meta"></div>
     <div id="error" class="error" style="display:none"></div>
     <!-- Hidden form fields to pass parameters to Bitrix -->
-    <input type="hidden" id="hidden_evpassport_id" name="EVPASSPORT_ID" value="">
+    <input type="hidden" id="hidden_evnumber" name="EVNUMBER" value="">
     <input type="hidden" id="hidden_event_name" name="EVENT_NAME" value="">
     <input type="hidden" id="hidden_event_date" name="EVENT_DATE" value="">
     <input type="hidden" id="hidden_event_city" name="EVENT_CITY" value="">
@@ -33,7 +33,7 @@
   <script>
     (function(){
       const params = new URLSearchParams(location.search);
-      const idStr = params.get('EVPASSPORT_ID');
+      const idStr = params.get('EVNUMBER');
       // Parse as integer - Bitrix integer fields require numeric value
       const id = idStr ? parseInt(idStr, 10) : null;
       const idAsNumber = id; // Keep numeric version for Bitrix number fields
@@ -45,14 +45,14 @@
       let eventCity = '';
 
       if (!id || isNaN(id)) {
-        errorEl.textContent = 'Ошибка: параметр EVPASSPORT_ID не указан в URL или не является числом.';
+        errorEl.textContent = 'Ошибка: параметр EVNUMBER не указан в URL или не является числом.';
         errorEl.style.display = 'block';
         titleEl.textContent = 'Регистрация на мероприятие';
-        console.error('❌ Invalid EVPASSPORT_ID:', idStr, '(parsed as:', id, ')');
+        console.error('❌ Invalid EVNUMBER:', idStr, '(parsed as:', id, ')');
         return;
       }
       
-      console.log('ℹ️ EVPASSPORT_ID received:', idStr, '(parsed as number:', idAsNumber, ')');
+      console.log('ℹ️ EVNUMBER received:', idStr, '(parsed as number:', idAsNumber, ')'):
 
       titleEl.textContent = `Регистрация на мероприятие №${id}`;
 
@@ -80,12 +80,12 @@
         .finally(() => {
           console.log('Event fetch finished, loading Bitrix form...');
           // Populate hidden form fields with parameters
-          document.getElementById('hidden_evpassport_id').value = id;
+          document.getElementById('hidden_evnumber').value = id;
           document.getElementById('hidden_event_name').value = eventName || `Мероприятие №${id}`;
           document.getElementById('hidden_event_date').value = eventDate || '';
           document.getElementById('hidden_event_city').value = eventCity || '';
           console.log('Hidden fields populated:', {
-            EVPASSPORT_ID: id,
+            EVNUMBER: id,
             EVENT_NAME: eventName,
             EVENT_DATE: eventDate,
             EVENT_CITY: eventCity
@@ -116,11 +116,11 @@
           
           // Try adding params to URL as query params - try multiple formats for number fields
           let modifiedUrl = url;
-          if (!modifiedUrl.includes('EVPASSPORT_ID')) {
+          if (!modifiedUrl.includes('EVNUMBER')) {
             const separator = modifiedUrl.includes('?') ? '&' : '?';
             // Add as plain number (for Bitrix integer fields)
-            modifiedUrl = modifiedUrl + separator + 'EVPASSPORT_ID=' + id;
-            console.log('🔗 Added EVPASSPORT_ID to URL as number:', id, '(direct value, no encoding)');
+            modifiedUrl = modifiedUrl + separator + 'EVNUMBER=' + id;
+            console.log('🔗 Added EVNUMBER to URL as number:', id, '(direct value, no encoding)');
             args[0] = modifiedUrl;
           }
           
@@ -135,11 +135,11 @@
                   console.log(`  ${key}: ${String(value).substring(0, 50)}`);
                 }
                 // For Bitrix integer fields - try to append as is (number, not string)
-                options.body.append('EVPASSPORT_ID', String(id)); // Bitrix may expect string representation
+                options.body.append('EVNUMBER', String(id)); // Bitrix may expect string representation
                 options.body.append('EVENT_NAME', eventName || `Мероприятие №${id}`);
                 options.body.append('EVENT_DATE', eventDate || '');
                 options.body.append('EVENT_CITY', eventCity || '');
-                console.log('✅ Added params to FormData (EVPASSPORT_ID as string:', String(id), ', type: ' + typeof String(id) + ')');
+                console.log('✅ Added params to FormData (EVNUMBER as string:', String(id), ', type: ' + typeof String(id) + ')');
                 console.log('📋 After append - FormData entries:');
                 for (let [key, value] of options.body.entries()) {
                   console.log(`  ${key}: ${String(value).substring(0, 50)}`);
@@ -218,7 +218,7 @@
 
         // Move hidden fields into the container so they're together
         const hiddenFields = [
-          document.getElementById('hidden_evpassport_id'),
+          document.getElementById('hidden_evnumber'),
           document.getElementById('hidden_event_name'),
           document.getElementById('hidden_event_date'),
           document.getElementById('hidden_event_city')
@@ -236,7 +236,7 @@
         script.setAttribute('data-b24-form', 'inline/739/0zko7k');
         script.setAttribute('data-skip-moving', 'true');
         // Pass parameters as data attributes for Bitrix
-        script.setAttribute('data-EVPASSPORT_ID', id);
+        script.setAttribute('data-EVNUMBER', id);
         script.setAttribute('data-EVENT_NAME', eventName || `Мероприятие №${id}`);
         script.setAttribute('data-EVENT_DATE', eventDate || '');
         script.setAttribute('data-EVENT_CITY', eventCity || '');
@@ -244,7 +244,7 @@
         console.log('📋 Inserting Bitrix loader script with params:', {id, eventName, eventDate, eventCity});
         // Setup window variables before loading the script so Bitrix can read them
         window.B24_FORM_PARAMS = {
-          EVPASSPORT_ID: id,
+          EVNUMBER: id,
           EVENT_NAME: eventName || `Мероприятие №${id}`,
           EVENT_DATE: eventDate || '',
           EVENT_CITY: eventCity || ''
@@ -307,16 +307,16 @@
             
             if (form && typeof form.setProperty === 'function') {
               console.log('🔧 Calling setProperty for custom fields...');
-              form.setProperty('EVPASSPORT_ID', id);
+              form.setProperty('EVNUMBER', id);
               form.setProperty('EVENT_NAME', eventName || `Мероприятие №${id}`);
               form.setProperty('EVENT_DATE', eventDate || '');
               form.setProperty('EVENT_CITY', eventCity || '');
-              console.log('✅ setProperty calls done, EVPASSPORT_ID=' + id);
+              console.log('✅ setProperty calls done, EVNUMBER=' + id);
               
               // Try other potential field names
               if (typeof form.setFieldValue === 'function') {
                 console.log('🔧 Trying setFieldValue...');
-                form.setFieldValue('EVPASSPORT_ID', id);
+                form.setFieldValue('EVNUMBER', id);
               }
             } else {
               console.warn('⚠️ Form object or setProperty not found in detail');
@@ -327,10 +327,13 @@
             if (formEl) {
               // Try to fill hidden fields that Bitrix might have created
               const allInputs = formEl.querySelectorAll('input[type="hidden"], input[type="text"]');
-              console.log('🔍 Checking for potential EVPASSPORT fields...');
+              console.log('🔍 Checking for potential EVNUMBER fields...');
               allInputs.forEach(input => {
-                if (input.name && input.name.toLowerCase().includes('passport')) {
-                  console.log(`  Found passport field: ${input.name}, filling with ${id}`);
+                if (input.name && input.name.toLowerCase().includes('evnumber')) {
+                  console.log(`  Found EVNUMBER field: ${input.name}, filling with ${id}`);
+                  input.value = id;
+                } else if (input.name && input.name.toLowerCase().includes('number')) {
+                  console.log(`  Found number field: ${input.name}, filling with ${id}`);
                   input.value = id;
                 } else if (input.name && (input.name === 'PHONE' || input.name === 'PHONE_NUMBER' || input.name === 'phone')) {
                   console.log(`  Found phone field: ${input.name}, filling with ${id}`);
@@ -341,7 +344,7 @@
             
             // Move hidden fields into the form element so they're submitted with it
             const hiddenFields = [
-              document.getElementById('hidden_evpassport_id'),
+              document.getElementById('hidden_evnumber'),
               document.getElementById('hidden_event_name'),
               document.getElementById('hidden_event_date'),
               document.getElementById('hidden_event_city')
