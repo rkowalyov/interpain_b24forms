@@ -21,7 +21,8 @@
     <h1 id="title">Регистрация на мероприятие</h1>
     <div id="info" class="meta"></div>
     <div id="error" class="error" style="display:none"></div>
-    <div id="closing-notice" style="display:none;background:#e8f5e9;padding:12px;border-radius:6px;margin-top:12px;text-align:center;font-weight:bold;color:#2e7d32"></div>
+    <div id="closing-notice" style="display:none;background:#e8f5e9;padding:12px;border-radius:6px;margin-top:12px;text-align:center;font-weight:bold;color:#2e7d32;font-size:16px"></div>
+    <div id="debug-log" style="display:none;background:#f5f5f5;padding:12px;border-radius:6px;margin-top:12px;font-size:12px;max-height:200px;overflow-y:auto;border:1px solid #ddd;font-family:monospace"></div>
     <!-- Hidden form fields to pass parameters to Bitrix -->
     <input type="hidden" id="hidden_evnumber" name="EVNUMBER" value="">
     <input type="hidden" id="hidden_event_name" name="EVENT_NAME" value="">
@@ -35,27 +36,36 @@
     (function(){
       const params = new URLSearchParams(location.search);
       const idStr = params.get('EVNUMBER');
-      // Parse as integer - Bitrix integer fields require numeric value
       const id = idStr ? parseInt(idStr, 10) : null;
-      const idAsNumber = id; // Keep numeric version for Bitrix number fields
+      const idAsNumber = id;
       const titleEl = document.getElementById('title');
       const infoEl = document.getElementById('info');
       const errorEl = document.getElementById('error');
       let eventName = '';
       let eventDate = '';
       let eventCity = '';
-      let finalSubmitInProgress = false; // Track if final submit button was clicked
-      let closingStarted = false; // Prevent double closing countdown
+      let closingStarted = false;
+      
+      // Global logging function
+      window.debugLog = (msg) => {
+        console.log(msg);
+        const log = document.getElementById('debug-log');
+        if (log) {
+          const time = new Date().toLocaleTimeString();
+          log.innerHTML += `[${time}] ${msg}<br>`;
+          log.scrollTop = log.scrollHeight;
+        }
+      };
+      
+      window.debugLog('🌍 Page initialized, EVNUMBER=' + idStr);
 
       if (!id || isNaN(id)) {
         errorEl.textContent = 'Ошибка: параметр EVNUMBER не указан в URL или не является числом.';
         errorEl.style.display = 'block';
         titleEl.textContent = 'Регистрация на мероприятие';
-        console.error('❌ Invalid EVNUMBER:', idStr, '(parsed as:', id, ')');
+        window.debugLog('❌ Invalid EVNUMBER: ' + idStr);
         return;
       }
-      
-      console.log('ℹ️ EVNUMBER received:', idStr, '(parsed as number:', idAsNumber, ')');
 
       titleEl.textContent = `Регистрация на мероприятие №${id}`;
 
@@ -76,23 +86,17 @@
           if (eventDate) parts.push(`Дата: ${formatDate(eventDate)}`);
           if (eventCity) parts.push(`Город: ${escapeHtml(eventCity)}`);
           infoEl.textContent = parts.join(' • ');
+          window.debugLog('✅ Event data loaded');
         })
         .catch(err => {
-          console.warn('Event API unavailable:', err);
+          window.debugLog('⚠️ Event API error: ' + err.message);
         })
         .finally(() => {
-          console.log('Event fetch finished, loading Bitrix form...');
-          // Populate hidden form fields with parameters
+          window.debugLog('Loading Bitrix form...');
           document.getElementById('hidden_evnumber').value = id;
           document.getElementById('hidden_event_name').value = eventName || `Мероприятие №${id}`;
           document.getElementById('hidden_event_date').value = eventDate || '';
           document.getElementById('hidden_event_city').value = eventCity || '';
-          console.log('Hidden fields populated:', {
-            EVNUMBER: id,
-            EVENT_NAME: eventName,
-            EVENT_DATE: eventDate,
-            EVENT_CITY: eventCity
-          });
           loadB24();
         });
 
@@ -100,66 +104,7 @@
         try{const dt=new Date(d); if (isNaN(dt)) return d; return dt.toLocaleString('ru-RU',{day:'2-digit',month:'long',year:'numeric'});}catch(e){return d}
       }
 
-      function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c]))}
-
-      function showClosingCountdown() {
-        // Prevent double invocation
-        if (closingStarted) {
-          console.log('⚠️ Closing countdown already started, skipping');
-          return;
-        }
-        closingStarted = true;
-        
-        const closingNotice = document.getElementById('closing-notice');
-        let secondsLeft = 3;
-        
-        const updateNotice = () => {
-          closingNotice.textContent = `Окно закроется через ${secondsLeft} сек...`;
-          console.log(`⏱️ Countdown: ${secondsLeft}s`);
-          
-          if (secondsLeft === 0) {
-            closingNotice.textContent = '👋 Закрытие...';
-            console.log('👋 Attempting to close window');
-            
-            // Try multiple methods to close
-            try {
-              // Method 1: Direct close
-              window.close();
-              console.log('✅ window.close() executed');
-            } catch (e) {
-              console.error('Method 1 failed:', e);
-            }
-            
-            // Method 2: Try opener close
-            if (window.opener && !window.opener.closed) {
-              try {
-                window.opener.postMessage({type: 'close'}, '*');
-                console.log('✅ Posted close message to opener');
-              } catch (e) {
-                console.error('Method 2 failed:', e);
-              }
-            }
-            
-            // Method 3: Redirect or hide content
-            setTimeout(() => {
-              try {
-                document.body.style.display = 'none';
-                console.log('✅ Hidden page content');
-              } catch (e) {
-                console.error('Method 3 failed:', e);
-              }
-            }, 100);
-            
-            return;
-          }
-          
-          secondsLeft--;
-          setTimeout(updateNotice, 1000);
-        };
-        
-        closingNotice.style.display = 'block';
-        updateNotice();
-      }
+      function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c])}
 
       // Track if this is final form submission
       // (already declared at top of function)
@@ -172,77 +117,47 @@
         
         // Log all POST requests for debugging
         if (typeof url === 'string' && options.method === 'POST') {
-          console.log('📤 POST Request to:', url.substring(0, 100));
+          window.debugLog('📤 POST to: ' + url.substring(0, 60));
         }
         
         // If this looks like a Bitrix form submission (POST to bitrix24.ru)
         if (typeof url === 'string' && url.includes('bitrix24.ru') && options.method === 'POST') {
-          console.log('🎯 Intercepted Bitrix fetch POST:', url);
+          window.debugLog('🎯 Bitrix POST detected');
           
-          // Try adding params to URL as query params - try multiple formats for number fields
+          // Try adding params to URL as query params
           let modifiedUrl = url;
           if (!modifiedUrl.includes('EVNUMBER')) {
             const separator = modifiedUrl.includes('?') ? '&' : '?';
-            // Add as plain number (for Bitrix integer fields)
             modifiedUrl = modifiedUrl + separator + 'EVNUMBER=' + id;
-            console.log('🔗 Added EVNUMBER to URL as number:', id, '(direct value, no encoding)');
             args[0] = modifiedUrl;
+            window.debugLog('🔗 Added EVNUMBER to URL');
           }
           
           // Try to add parameters to the request body
-          if (options.body) {
-            try {
-              if (typeof options.body === 'string' && options.body.includes('FormData')) {
-                console.log('📝 FormData in body (string type)');
-              } else if (options.body instanceof FormData) {
-                console.log('📋 Before append - FormData entries:');
-                for (let [key, value] of options.body.entries()) {
-                  console.log(`  ${key}: ${String(value).substring(0, 50)}`);
-                }
-                // For Bitrix integer fields - try to append as is (number, not string)
-                options.body.append('EVNUMBER', String(id)); // Bitrix may expect string representation
-                options.body.append('EVENT_NAME', eventName || `Мероприятие №${id}`);
-                options.body.append('EVENT_DATE', eventDate || '');
-                options.body.append('EVENT_CITY', eventCity || '');
-                console.log('✅ Added params to FormData (EVNUMBER as string:', String(id), ', type: ' + typeof String(id) + ')');
-                console.log('📋 After append - FormData entries:');
-                for (let [key, value] of options.body.entries()) {
-                  console.log(`  ${key}: ${String(value).substring(0, 50)}`);
-                }
-              } else if (typeof options.body === 'string') {
-                console.log('📝 String body before:', options.body.substring(0, 200));
-                options.body = options.body + 
-                  '&EVNUMBER=' + encodeURIComponent(id) +
-                  '&EVENT_NAME=' + encodeURIComponent(eventName || `Мероприятие №${id}`) +
-                  '&EVENT_DATE=' + encodeURIComponent(eventDate || '') +
-                  '&EVENT_CITY=' + encodeURIComponent(eventCity || '');
-                console.log('✅ Added params to body');
-                console.log('📝 String body after:', options.body.substring(0, 300));
-              }
-            } catch (e) {
-              console.error('❌ Error adding params:', e);
-            }
-          } else {
-            console.log('⚠️ No body in request');
+          if (options.body && options.body instanceof FormData) {
+            options.body.append('EVNUMBER', String(id));
+            options.body.append('EVENT_NAME', eventName || `Мероприятие №${id}`);
+            options.body.append('EVENT_DATE', eventDate || '');
+            options.body.append('EVENT_CITY', eventCity || '');
+            window.debugLog('✅ Added params to FormData');
           }
         }
         
         // Chain the fetch to detect successful completion
         const fetchPromise = originalFetch.apply(this, args);
-        if (typeof url === 'string' && url.includes('crmform.bitrix24.ru') && options.method === 'POST') {
-          console.log('🎯 Final form submission request detected to crmform.bitrix24.ru');
+        
+        // Monitor all responses for debugging
+        if (typeof url === 'string' && url.includes('bitrix24.ru')) {
           fetchPromise
             .then(response => {
-              console.log('✅ Bitrix CRM response received:', response.status);
-              // Auto-close on successful CRM submission
-              if (response.status >= 200 && response.status < 400) {
-                console.log('✅ Final form submission completed successfully!');
-                showClosingCountdown();
-              }
+              window.debugLog(`✅ Bitrix response: ${response.status}`);
+              // Close window on successful response
+              window.debugLog('💚 Triggering close sequence');
+              window.showClosingCountdown();
               return response;
             })
             .catch(err => {
-              console.error('❌ Bitrix fetch error:', err);
+              window.debugLog('❌ Fetch error: ' + err.message);
             });
         }
         
@@ -254,45 +169,36 @@
       XMLHttpRequest.prototype.open = function(method, url, ...rest) {
         this._url = url;
         this._method = method;
-        this._isBitrixRequest = url && url.includes('bitrix24.ru');
         if (method === 'POST') {
-          console.log('📤 XHR POST to:', url.substring(0, 100));
+          window.debugLog('📤 XHR POST to: ' + url.substring(0, 60));
         }
         return originalOpen.apply(this, [method, url, ...rest]);
       };
 
       const originalSend = XMLHttpRequest.prototype.send;
       XMLHttpRequest.prototype.send = function(body) {
-        const self = this;
         if (this._url && this._url.includes('bitrix24.ru') && this._method === 'POST' && body) {
-          console.log('🎯 Intercepted Bitrix XHR POST:', this._url);
+          window.debugLog('🎯 Bitrix XHR detected');
           try {
             if (body instanceof FormData) {
-              console.log('📋 XHR FormData before:');
-              for (let [key, value] of body.entries()) {
-                console.log(`  ${key}: ${String(value).substring(0, 50)}`);
-              }
               body.append('EVNUMBER', id);
               body.append('EVENT_NAME', eventName || `Мероприятие №${id}`);
               body.append('EVENT_DATE', eventDate || '');
               body.append('EVENT_CITY', eventCity || '');
-              console.log('✅ Added params to FormData (EVNUMBER as:', typeof id, String(id), ')');
-            } else {
-              console.log('📝 XHR body type:', typeof body, 'length:', body.length);
+              window.debugLog('✅ Added params to XHR FormData');
             }
           } catch (e) {
-            console.error('❌ Error in XHR send:', e);
+            window.debugLog('❌ XHR error: ' + e.message);
           }
 
-          // Listen for XHR completion to detect final submission
+          // Listen for XHR completion
           const originalOnReadyStateChange = this.onreadystatechange;
           this.onreadystatechange = function() {
             if (this.readyState === 4) {
-              console.log('✅ XHR completed with status:', this.status);
-              // Auto-close on successful CRM response
-              if (this.status >= 200 && this.status < 400 && this._url && this._url.includes('crmform.bitrix24.ru')) {
-                console.log('✅ Final form submission completed via XHR!');
-                showClosingCountdown();
+              window.debugLog(`✅ XHR completed: ${this.status}`);
+              if (this.status >= 200 && this.status < 400) {
+                window.debugLog('💚 Triggering close sequence from XHR');
+                window.showClosingCountdown();
               }
             }
             if (originalOnReadyStateChange) {
@@ -304,179 +210,58 @@
       };
 
       function loadB24(){
-        console.log('🚀 loadB24 invoked');
-        // Use provided loader URL (from Bitrix24 embed) or proxy through our serverless endpoint
-        // Proxy avoids client-side blockers that target common CDNs.
+        window.debugLog('🚀 loadB24 started');
         const loaderBase = window.B24_LOADER_URL || '/api/loader';
         const container = document.getElementById('b24form_container');
 
-        // Always clear the container and insert a fresh script element.
-        // This avoids rendering any escaped loader text and guarantees the loader is executed.
         try {
           container.textContent = '';
         } catch (e) {
           try { container.innerHTML = ''; } catch (e) {}
         }
 
-        // Move hidden fields into the container so they're together
-        const hiddenFields = [
-          document.getElementById('hidden_evnumber'),
-          document.getElementById('hidden_event_name'),
-          document.getElementById('hidden_event_date'),
-          document.getElementById('hidden_event_city')
-        ];
-        hiddenFields.forEach(field => {
-          if (field) {
-            container.appendChild(field);
-            console.log('✅ Moved hidden field to container:', field.name);
-          }
-        });
-
-        // Insert script using Bitrix recommended pattern with cache-busting timestamp
         const script = document.createElement('script');
         script.async = true;
         script.setAttribute('data-b24-form', 'inline/739/0zko7k');
         script.setAttribute('data-skip-moving', 'true');
-        // Pass parameters as data attributes for Bitrix
         script.setAttribute('data-EVNUMBER', id);
-        script.setAttribute('data-EVENT_NAME', eventName || `Мероприятие №${id}`);
-        script.setAttribute('data-EVENT_DATE', eventDate || '');
-        script.setAttribute('data-EVENT_CITY', eventCity || '');
         
-        console.log('📋 Inserting Bitrix loader script with params:', {id, eventName, eventDate, eventCity});
-        // Setup window variables before loading the script so Bitrix can read them
         window.B24_FORM_PARAMS = {
           EVNUMBER: id,
           EVENT_NAME: eventName || `Мероприятие №${id}`,
           EVENT_DATE: eventDate || '',
           EVENT_CITY: eventCity || ''
         };
-        console.log('📌 Window params set:', window.B24_FORM_PARAMS);
         
         const loaderUrl = loaderBase + '?ts=' + Date.now();
-
-        // Load via proxy src — proxy is on same domain so content blockers won't block it.
         script.src = loaderUrl;
         container.appendChild(script);
-        console.log('📥 Appended Bitrix loader via proxy', loaderUrl);
+        window.debugLog('📥 Bitrix loader appended');
 
         // Monitor form submission after it appears
         setTimeout(() => {
           const formEl = document.querySelector('form');
           if (formEl) {
-            console.log('📝 Found form element, attaching submit listener');
+            window.debugLog('📝 Form found');
             formEl.addEventListener('submit', (e) => {
-              console.log('🔴 FORM SUBMIT EVENT - Form is being submitted!');
-              const allInputs = formEl.querySelectorAll('[name]');
-              console.log(`📋 Submitted fields (${allInputs.length}):`);
-              allInputs.forEach((el) => {
-                console.log(`  ${el.name}: "${String(el.value).substring(0, 100)}"`);
-              });
-              // Note: Window closing is now handled by fetch interception for final submission
-              console.log('📤 Form submitted - waiting for server response...');
+              window.debugLog('🔴 Form submitted');
             }, true);
-          } else {
-            console.log('⚠️ Form element not found yet');
           }
         }, 500);
 
-        // Also listen for "Отправить данные" button click to mark final submission
-        setTimeout(() => {
-          const buttons = document.querySelectorAll('button');
-          buttons.forEach(btn => {
-            if (btn.textContent.includes('Отправить данные')) {
-              console.log('✅ Found "Отправить данные" button, attaching click listener');
-              btn.addEventListener('click', () => {
-                console.log('🔴 FINAL SUBMIT BUTTON CLICKED - "Отправить данные"');
-                finalSubmitInProgress = true;
-              });
-            }
-          });
-        }, 500);
-
-        // Also listen for form init to pass params via setProperty and move hidden fields into form
+        // Also listen for form init to pass params via setProperty
         window.addEventListener('b24:form:init', function(ev){
           try{
-            const detail = ev && ev.detail;
-            console.log('🎯 b24:form:init fired, detail keys:', detail && Object.keys(detail));
-            
-            // detail.object is the form API object
-            const form = detail && detail.object;
-            console.log('📋 Form object:', !!form, 'has setProperty:', form && typeof form.setProperty === 'function');
-            
-            // Log form fields
-            const formEl2 = document.querySelector('form');
-            if (formEl2) {
-              const inputs = formEl2.querySelectorAll('input, textarea, select');
-              console.log(`📝 Form has ${inputs.length} input fields:`);
-              inputs.forEach((el, i) => {
-                console.log(`  [${i}] name="${el.name}" type="${el.type}" id="${el.id}" value="${String(el.value).substring(0, 50)}"`);
-              });
-              
-              // Try to find field that might accept EVNUMBER
-              const allAttrs = [];
-              inputs.forEach(el => {
-                for (let attr of el.attributes) {
-                  allAttrs.push(`${attr.name}=${attr.value}`);
-                }
-              });
-              console.log('📋 All field attributes:', allAttrs.slice(0, 10));
-            }
-            
+            const form = ev?.detail?.object;
             if (form && typeof form.setProperty === 'function') {
-              console.log('🔧 Calling setProperty for custom fields...');
+              window.debugLog('🔧 Setting form properties');
               form.setProperty('EVNUMBER', id);
               form.setProperty('EVENT_NAME', eventName || `Мероприятие №${id}`);
               form.setProperty('EVENT_DATE', eventDate || '');
               form.setProperty('EVENT_CITY', eventCity || '');
-              console.log('✅ setProperty calls done, EVNUMBER=' + id);
-              
-              // Try other potential field names
-              if (typeof form.setFieldValue === 'function') {
-                console.log('🔧 Trying setFieldValue...');
-                form.setFieldValue('EVNUMBER', id);
-              }
-            } else {
-              console.warn('⚠️ Form object or setProperty not found in detail');
+              window.debugLog('✅ Form properties set');
             }
-            
-            // Try direct DOM manipulation on any field that might contain our data
-            const formEl3 = document.querySelector('form');
-            if (formEl3) {
-              // Try to fill hidden fields that Bitrix might have created
-              const allInputs = formEl3.querySelectorAll('input[type="hidden"], input[type="text"]');
-              console.log('🔍 Checking for potential EVNUMBER fields...');
-              allInputs.forEach(input => {
-                if (input.name && input.name.toLowerCase().includes('evnumber')) {
-                  console.log(`  Found EVNUMBER field: ${input.name}, filling with ${id}`);
-                  input.value = id;
-                } else if (input.name && input.name.toLowerCase().includes('number')) {
-                  console.log(`  Found number field: ${input.name}, filling with ${id}`);
-                  input.value = id;
-                } else if (input.name && (input.name === 'PHONE' || input.name === 'PHONE_NUMBER' || input.name === 'phone')) {
-                  console.log(`  Found phone field: ${input.name}, filling with ${id}`);
-                  input.value = id;
-                }
-              });
-            }
-            
-            // Move hidden fields into the form element so they're submitted with it
-            const hiddenFields = [
-              document.getElementById('hidden_evnumber'),
-              document.getElementById('hidden_event_name'),
-              document.getElementById('hidden_event_date'),
-              document.getElementById('hidden_event_city')
-            ];
-            const formElTarget = document.querySelector('form');
-            if (formElTarget) {
-              hiddenFields.forEach(field => {
-                if (field && !(field.parentElement && field.parentElement.closest('form'))) {
-                  formElTarget.appendChild(field);
-                  console.log('✅ Moved hidden field to form:', field.name);
-                }
-              });
-            }
-          }catch(e){console.error('❌ b24:form:init error:', e)}
+          }catch(e){window.debugLog('❌ b24:form:init error: ' + e.message)}
         });
       }
     })();
