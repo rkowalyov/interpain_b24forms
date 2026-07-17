@@ -97,20 +97,43 @@
           try { container.innerHTML = ''; } catch (e) {}
         }
         console.log('Inserting Bitrix loader script into container');
-        // Build query string with form parameters to pass to Bitrix loader
-        const queryParams = new URLSearchParams();
-        queryParams.set('ts', Date.now());
-        queryParams.set('EVPASSPORT_ID', id);
-        if (eventName) queryParams.set('EVENT_NAME', eventName);
-        if (eventDate) queryParams.set('EVENT_DATE', eventDate);
-        if (eventCity) queryParams.set('EVENT_CITY', eventCity);
-        const loaderUrl = loaderBase + '?' + queryParams.toString();
+        // Setup window variables before loading the script so Bitrix can read them
+        window.B24_FORM_PARAMS = {
+          EVPASSPORT_ID: id,
+          EVENT_NAME: eventName || `Мероприятие №${id}`,
+          EVENT_DATE: eventDate || '',
+          EVENT_CITY: eventCity || ''
+        };
+        console.log('Window params set:', window.B24_FORM_PARAMS);
+        
+        const loaderUrl = loaderBase + '?ts=' + Date.now();
 
         // Load via proxy src — proxy is on same domain so content blockers won't block it.
         script.src = loaderUrl;
         container.appendChild(script);
         console.log('Appended Bitrix loader via proxy', loaderUrl);
-        console.log('Form params passed in URL: EVPASSPORT_ID=' + id);
+
+        // Also listen for form init to pass params via setProperty
+        window.addEventListener('b24:form:init', function(ev){
+          try{
+            const detail = ev && ev.detail;
+            console.log('b24:form:init fired, detail keys:', detail && Object.keys(detail));
+            
+            // detail.object is the form API object
+            const form = detail && detail.object;
+            console.log('Form object:', !!form, 'has setProperty:', form && typeof form.setProperty === 'function');
+            
+            if (form && typeof form.setProperty === 'function') {
+              form.setProperty('EVPASSPORT_ID', id);
+              form.setProperty('EVENT_NAME', eventName || `Мероприятие №${id}`);
+              form.setProperty('EVENT_DATE', eventDate || '');
+              form.setProperty('EVENT_CITY', eventCity || '');
+              console.log('setProperty calls done, EVPASSPORT_ID=' + id);
+            } else {
+              console.warn('Form object or setProperty not found in detail');
+            }
+          }catch(e){console.error('b24:form:init error:', e)}
+        });
       }
     })();
   </script>
