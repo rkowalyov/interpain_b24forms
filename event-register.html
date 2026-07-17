@@ -45,6 +45,7 @@
       let eventDate = '';
       let eventCity = '';
       let finalSubmitInProgress = false; // Track if final submit button was clicked
+      let closingStarted = false; // Prevent double closing countdown
 
       if (!id || isNaN(id)) {
         errorEl.textContent = 'Ошибка: параметр EVNUMBER не указан в URL или не является числом.';
@@ -102,6 +103,13 @@
       function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c]))}
 
       function showClosingCountdown() {
+        // Prevent double invocation
+        if (closingStarted) {
+          console.log('⚠️ Closing countdown already started, skipping');
+          return;
+        }
+        closingStarted = true;
+        
         const closingNotice = document.getElementById('closing-notice');
         let secondsLeft = 3;
         
@@ -221,13 +229,14 @@
         
         // Chain the fetch to detect successful completion
         const fetchPromise = originalFetch.apply(this, args);
-        if (typeof url === 'string' && url.includes('bitrix24.ru') && options.method === 'POST') {
+        if (typeof url === 'string' && url.includes('crmform.bitrix24.ru') && options.method === 'POST') {
+          console.log('🎯 Final form submission request detected to crmform.bitrix24.ru');
           fetchPromise
             .then(response => {
-              console.log('✅ Bitrix response received:', response.status);
-              // Only close window if this was the final submit (button clicked)
-              if (finalSubmitInProgress) {
-                console.log('✅ Final form submission completed!');
+              console.log('✅ Bitrix CRM response received:', response.status);
+              // Auto-close on successful CRM submission
+              if (response.status >= 200 && response.status < 400) {
+                console.log('✅ Final form submission completed successfully!');
                 showClosingCountdown();
               }
               return response;
@@ -280,7 +289,8 @@
           this.onreadystatechange = function() {
             if (this.readyState === 4) {
               console.log('✅ XHR completed with status:', this.status);
-              if (finalSubmitInProgress && this.status >= 200 && this.status < 400) {
+              // Auto-close on successful CRM response
+              if (this.status >= 200 && this.status < 400 && this._url && this._url.includes('crmform.bitrix24.ru')) {
                 console.log('✅ Final form submission completed via XHR!');
                 showClosingCountdown();
               }
@@ -383,36 +393,6 @@
             }
           });
         }, 500);
-
-        // Monitor for success message - alternative detection method
-        setTimeout(() => {
-          const observer = new MutationObserver((mutations) => {
-            for (let mutation of mutations) {
-              // Check if success message appeared
-              if (mutation.type === 'childList' || mutation.type === 'characterData') {
-                const statusElements = document.querySelectorAll('status, [role="status"], [class*="success"], [class*="accepted"]');
-                for (let el of statusElements) {
-                  if (el.textContent && el.textContent.includes('приняты')) {
-                    console.log('✅ SUCCESS MESSAGE DETECTED - Form data accepted!');
-                    if (!finalSubmitInProgress) {
-                      // Force close even if button wasn't clicked
-                      console.log('⚠️ Forcing close from success message detection');
-                      showClosingCountdown();
-                    }
-                  }
-                }
-              }
-            }
-          });
-          
-          observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            characterData: true
-          });
-          
-          console.log('📊 MutationObserver started for success message detection');
-        }, 1000);
 
         // Also listen for form init to pass params via setProperty and move hidden fields into form
         window.addEventListener('b24:form:init', function(ev){
