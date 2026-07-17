@@ -93,6 +93,73 @@
 
       function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c]))}
 
+      // Intercept fetch requests to add our parameters
+      const originalFetch = window.fetch;
+      window.fetch = function(...args) {
+        const url = args[0];
+        const options = args[1] || {};
+        
+        // If this looks like a Bitrix form submission (POST to bitrix24.ru)
+        if (typeof url === 'string' && url.includes('bitrix24.ru') && options.method === 'POST') {
+          console.log('Intercepted Bitrix fetch POST:', url);
+          
+          // Try to add parameters to the request body
+          if (options.body) {
+            try {
+              if (typeof options.body === 'string' && options.body.includes('FormData')) {
+                // FormData case - handled by intercepting FormData
+                console.log('FormData in body');
+              } else if (options.body instanceof FormData) {
+                options.body.append('EVPASSPORT_ID', id);
+                options.body.append('EVENT_NAME', eventName || `Мероприятие №${id}`);
+                options.body.append('EVENT_DATE', eventDate || '');
+                options.body.append('EVENT_CITY', eventCity || '');
+                console.log('Added params to FormData');
+              } else if (typeof options.body === 'string') {
+                // JSON or URL-encoded
+                options.body = options.body + 
+                  '&EVPASSPORT_ID=' + encodeURIComponent(id) +
+                  '&EVENT_NAME=' + encodeURIComponent(eventName || `Мероприятие №${id}`) +
+                  '&EVENT_DATE=' + encodeURIComponent(eventDate || '') +
+                  '&EVENT_CITY=' + encodeURIComponent(eventCity || '');
+                console.log('Added params to body');
+              }
+            } catch (e) {
+              console.error('Error adding params:', e);
+            }
+          }
+        }
+        
+        return originalFetch.apply(this, args);
+      };
+
+      // Also intercept XMLHttpRequest
+      const originalOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+        this._url = url;
+        this._method = method;
+        return originalOpen.apply(this, [method, url, ...rest]);
+      };
+
+      const originalSend = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.send = function(body) {
+        if (this._url && this._url.includes('bitrix24.ru') && this._method === 'POST' && body) {
+          console.log('Intercepted Bitrix XHR POST:', this._url);
+          try {
+            if (body instanceof FormData) {
+              body.append('EVPASSPORT_ID', id);
+              body.append('EVENT_NAME', eventName || `Мероприятие №${id}`);
+              body.append('EVENT_DATE', eventDate || '');
+              body.append('EVENT_CITY', eventCity || '');
+              console.log('Added params to XHR FormData');
+            }
+          } catch (e) {
+            console.error('Error in XHR send:', e);
+          }
+        }
+        return originalSend.apply(this, [body]);
+      };
+
       function loadB24(){
         console.log('loadB24 invoked');
         // Use provided loader URL (from Bitrix24 embed) or proxy through our serverless endpoint
