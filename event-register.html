@@ -287,9 +287,9 @@
             console.log('📋 Form object:', !!form, 'has setProperty:', form && typeof form.setProperty === 'function');
             
             // Log form fields
-            const formEl = document.querySelector('form');
-            if (formEl) {
-              const inputs = formEl.querySelectorAll('input, textarea, select');
+            const formEl2 = document.querySelector('form');
+            if (formEl2) {
+              const inputs = formEl2.querySelectorAll('input, textarea, select');
               console.log(`📝 Form has ${inputs.length} input fields:`);
               inputs.forEach((el, i) => {
                 console.log(`  [${i}] name="${el.name}" type="${el.type}" id="${el.id}" value="${String(el.value).substring(0, 50)}"`);
@@ -323,10 +323,10 @@
             }
             
             // Try direct DOM manipulation on any field that might contain our data
-            const formEl = document.querySelector('form');
-            if (formEl) {
+            const formEl3 = document.querySelector('form');
+            if (formEl3) {
               // Try to fill hidden fields that Bitrix might have created
-              const allInputs = formEl.querySelectorAll('input[type="hidden"], input[type="text"]');
+              const allInputs = formEl3.querySelectorAll('input[type="hidden"], input[type="text"]');
               console.log('🔍 Checking for potential EVNUMBER fields...');
               allInputs.forEach(input => {
                 if (input.name && input.name.toLowerCase().includes('evnumber')) {
