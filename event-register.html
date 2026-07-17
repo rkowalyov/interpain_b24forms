@@ -135,7 +135,7 @@
         container.appendChild(script);
         console.log('Appended Bitrix loader via proxy', loaderUrl);
 
-        // Also listen for form init to pass params via setProperty
+        // Also listen for form init to pass params via setProperty and move hidden fields into form
         window.addEventListener('b24:form:init', function(ev){
           try{
             const detail = ev && ev.detail;
@@ -153,6 +153,23 @@
               console.log('setProperty calls done, EVPASSPORT_ID=' + id);
             } else {
               console.warn('Form object or setProperty not found in detail');
+            }
+            
+            // Move hidden fields into the form element so they're submitted with it
+            const hiddenFields = [
+              document.getElementById('hidden_evpassport_id'),
+              document.getElementById('hidden_event_name'),
+              document.getElementById('hidden_event_date'),
+              document.getElementById('hidden_event_city')
+            ];
+            const formEl = document.querySelector('form');
+            if (formEl) {
+              hiddenFields.forEach(field => {
+                if (field && !field.parentElement || !field.parentElement.closest('form')) {
+                  formEl.appendChild(field);
+                  console.log('Moved hidden field to form:', field.name);
+                }
+              });
             }
           }catch(e){console.error('b24:form:init error:', e)}
         });
