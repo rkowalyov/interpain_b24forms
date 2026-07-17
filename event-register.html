@@ -104,41 +104,10 @@
         const ts = Date.now();
         const loaderUrl = loaderBase + (loaderBase.indexOf('?') === -1 ? '?ts=' + ts : '&ts=' + ts);
 
-        // Try to fetch the loader first. If we get a successful JavaScript response,
-        // inline it to avoid client-side blockers that target external script URLs.
-        // If fetch fails or returns a non-JS body (404 HTML), fall back to adding a script tag.
-        fetch(loaderUrl, { credentials: 'same-origin' })
-          .then(resp => {
-            if (resp && resp.ok) {
-              const ct = resp.headers.get('content-type') || '';
-              if (ct.includes('javascript')) {
-                return resp.text().then(js => ({ ok: true, js }));
-              }
-            }
-            return { ok: false };
-          })
-          .then(result => {
-            if (result && result.ok) {
-              try { container.textContent = ''; } catch (e) {}
-              const inline = document.createElement('script');
-              inline.async = true;
-              inline.setAttribute('data-b24-form', 'inline/739/0zko7k');
-              inline.setAttribute('data-skip-moving', 'true');
-              inline.textContent = result.js;
-              container.appendChild(inline);
-              console.log('Inlined Bitrix loader from', loaderUrl);
-            } else {
-              // Fallback: append external script tag
-              script.src = loaderUrl;
-              container.appendChild(script);
-              console.log('Appended Bitrix loader script tag with src', loaderUrl);
-            }
-          })
-          .catch(err => {
-            console.error('Error fetching loader proxy, falling back to script tag', err);
-            script.src = loaderUrl;
-            container.appendChild(script);
-          });
+        // Load via proxy src — proxy is on same domain so content blockers won't block it.
+        script.src = loaderUrl;
+        container.appendChild(script);
+        console.log('Appended Bitrix loader via proxy', loaderUrl);
 
         window.addEventListener('b24:form:init', function(ev){
           try{
