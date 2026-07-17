@@ -114,12 +114,13 @@
         if (typeof url === 'string' && url.includes('bitrix24.ru') && options.method === 'POST') {
           console.log('🎯 Intercepted Bitrix fetch POST:', url);
           
-          // Try adding params to URL as query params
+          // Try adding params to URL as query params - try multiple formats for number fields
           let modifiedUrl = url;
           if (!modifiedUrl.includes('EVPASSPORT_ID')) {
             const separator = modifiedUrl.includes('?') ? '&' : '?';
-            modifiedUrl = modifiedUrl + separator + 'EVPASSPORT_ID=' + encodeURIComponent(id);
-            console.log('🔗 Added EVPASSPORT_ID to URL');
+            // Add as plain number (for Bitrix integer fields)
+            modifiedUrl = modifiedUrl + separator + 'EVPASSPORT_ID=' + id;
+            console.log('🔗 Added EVPASSPORT_ID to URL as number:', id, '(direct value, no encoding)');
             args[0] = modifiedUrl;
           }
           
@@ -133,11 +134,12 @@
                 for (let [key, value] of options.body.entries()) {
                   console.log(`  ${key}: ${String(value).substring(0, 50)}`);
                 }
-                options.body.append('EVPASSPORT_ID', id);
+                // For Bitrix integer fields - try to append as is (number, not string)
+                options.body.append('EVPASSPORT_ID', String(id)); // Bitrix may expect string representation
                 options.body.append('EVENT_NAME', eventName || `Мероприятие №${id}`);
                 options.body.append('EVENT_DATE', eventDate || '');
                 options.body.append('EVENT_CITY', eventCity || '');
-                console.log('✅ Added params to FormData');
+                console.log('✅ Added params to FormData (EVPASSPORT_ID as string:', String(id), ', type: ' + typeof String(id) + ')');
                 console.log('📋 After append - FormData entries:');
                 for (let [key, value] of options.body.entries()) {
                   console.log(`  ${key}: ${String(value).substring(0, 50)}`);
