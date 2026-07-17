@@ -16,3 +16,21 @@ Configuration options (optional):
 
 The page will set hidden form properties on `b24:form:init` using `form.setProperty`: `EVNUMBER`, `EVENT_NAME`, `EVENT_DATE`, `EVENT_CITY`.
 
+## Troubleshooting: EVNUMBER parameter arrives as 0
+
+If the `EVNUMBER` parameter is being transmitted but arrives in Bitrix as **0**, it's likely due to the field type configuration.
+
+### Solution:
+
+1. Open Bitrix24 Admin: `https://your-domain.bitrix24.ru/admin/`
+2. Navigate to: **CRM** → **Channels** → **Forms**
+3. Edit your form and find the **EVNUMBER** field
+4. **Change field type** from **"Integer"** to **"Text"** (Целое число → Текст)
+5. Save changes
+
+The parameter should now be transmitted correctly and arrive as `845` instead of `0`.
+
+### Additional debugging:
+
+See [EVNUMBER_TRANSMISSION_STATUS.md](EVNUMBER_TRANSMISSION_STATUS.md) for detailed transmission flow and debugging steps.
+
