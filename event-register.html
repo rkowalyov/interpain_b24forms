@@ -33,7 +33,10 @@
   <script>
     (function(){
       const params = new URLSearchParams(location.search);
-      const id = params.get('EVPASSPORT_ID');
+      const idStr = params.get('EVPASSPORT_ID');
+      // Parse as integer - Bitrix integer fields require numeric value
+      const id = idStr ? parseInt(idStr, 10) : null;
+      const idAsNumber = id; // Keep numeric version for Bitrix number fields
       const titleEl = document.getElementById('title');
       const infoEl = document.getElementById('info');
       const errorEl = document.getElementById('error');
@@ -41,12 +44,15 @@
       let eventDate = '';
       let eventCity = '';
 
-      if (!id) {
-        errorEl.textContent = 'Ошибка: параметр EVPASSPORT_ID не указан в URL.';
+      if (!id || isNaN(id)) {
+        errorEl.textContent = 'Ошибка: параметр EVPASSPORT_ID не указан в URL или не является числом.';
         errorEl.style.display = 'block';
         titleEl.textContent = 'Регистрация на мероприятие';
+        console.error('❌ Invalid EVPASSPORT_ID:', idStr, '(parsed as:', id, ')');
         return;
       }
+      
+      console.log('ℹ️ EVPASSPORT_ID received:', idStr, '(parsed as number:', idAsNumber, ')');
 
       titleEl.textContent = `Регистрация на мероприятие №${id}`;
 
@@ -182,7 +188,7 @@
               body.append('EVENT_NAME', eventName || `Мероприятие №${id}`);
               body.append('EVENT_DATE', eventDate || '');
               body.append('EVENT_CITY', eventCity || '');
-              console.log('✅ Added params to XHR FormData');
+              console.log('✅ Added params to FormData (EVPASSPORT_ID as:', typeof id, String(id), ')');
             } else {
               console.log('📝 XHR body type:', typeof body, 'length:', body.length);
             }
