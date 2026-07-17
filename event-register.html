@@ -133,7 +133,10 @@
         try{const dt=new Date(d); if (isNaN(dt)) return d; return dt.toLocaleString('ru-RU',{day:'2-digit',month:'long',year:'numeric'});}catch(e){return d}
       }
 
-      function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c])}
+      function escapeHtml(s){
+        const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+        return String(s).replace(/[&<>"']/g, c => map[c]);
+      }
 
       // Track if this is final form submission
       // (already declared at top of function)
@@ -290,7 +293,7 @@
               form.setProperty('EVENT_CITY', eventCity || '');
               window.debugLog('✅ Form properties set');
             }
-          }catch(e){window.debugLog('❌ b24:form:init error: ' + e.message)}
+          }catch(e){window.debugLog('❌ b24:form:init error: ' + e.message);}
         });
       }
     })();
