@@ -57,6 +57,35 @@
         }
       };
       
+      window.showClosingCountdown = () => {
+        if (closingStarted) {
+          window.debugLog('⚠️ Already closing');
+          return;
+        }
+        closingStarted = true;
+        
+        const closingNotice = document.getElementById('closing-notice');
+        window.debugLog('✅ showClosingCountdown called!');
+        
+        let seconds = 3;
+        const updateNotice = () => {
+          closingNotice.textContent = `Окно закроется через ${seconds} сек...`;
+          closingNotice.style.display = 'block';
+          window.debugLog(`⏱️ ${seconds}s left`);
+          
+          if (seconds === 0) {
+            closingNotice.textContent = '👋 Закрытие...';
+            window.debugLog('👋 Calling window.close()');
+            window.close();
+          } else {
+            seconds--;
+            setTimeout(updateNotice, 1000);
+          }
+        };
+        
+        updateNotice();
+      };
+      
       window.debugLog('🌍 Page initialized, EVNUMBER=' + idStr);
 
       if (!id || isNaN(id)) {
