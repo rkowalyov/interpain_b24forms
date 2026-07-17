@@ -21,6 +21,7 @@
     <h1 id="title">Регистрация на мероприятие</h1>
     <div id="info" class="meta"></div>
     <div id="error" class="error" style="display:none"></div>
+    <div id="closing-notice" style="display:none;background:#e8f5e9;padding:12px;border-radius:6px;margin-top:12px;text-align:center;font-weight:bold;color:#2e7d32"></div>
     <!-- Hidden form fields to pass parameters to Bitrix -->
     <input type="hidden" id="hidden_evnumber" name="EVNUMBER" value="">
     <input type="hidden" id="hidden_event_name" name="EVENT_NAME" value="">
@@ -100,6 +101,58 @@
 
       function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c]))}
 
+      function showClosingCountdown() {
+        const closingNotice = document.getElementById('closing-notice');
+        let secondsLeft = 3;
+        
+        const updateNotice = () => {
+          closingNotice.textContent = `Окно закроется через ${secondsLeft} сек...`;
+          console.log(`⏱️ Countdown: ${secondsLeft}s`);
+          
+          if (secondsLeft === 0) {
+            closingNotice.textContent = '👋 Закрытие...';
+            console.log('👋 Attempting to close window');
+            
+            // Try multiple methods to close
+            try {
+              // Method 1: Direct close
+              window.close();
+              console.log('✅ window.close() executed');
+            } catch (e) {
+              console.error('Method 1 failed:', e);
+            }
+            
+            // Method 2: Try opener close
+            if (window.opener && !window.opener.closed) {
+              try {
+                window.opener.postMessage({type: 'close'}, '*');
+                console.log('✅ Posted close message to opener');
+              } catch (e) {
+                console.error('Method 2 failed:', e);
+              }
+            }
+            
+            // Method 3: Redirect or hide content
+            setTimeout(() => {
+              try {
+                document.body.style.display = 'none';
+                console.log('✅ Hidden page content');
+              } catch (e) {
+                console.error('Method 3 failed:', e);
+              }
+            }, 100);
+            
+            return;
+          }
+          
+          secondsLeft--;
+          setTimeout(updateNotice, 1000);
+        };
+        
+        closingNotice.style.display = 'block';
+        updateNotice();
+      }
+
       // Track if this is final form submission
       // (already declared at top of function)
 
@@ -175,11 +228,7 @@
               // Only close window if this was the final submit (button clicked)
               if (finalSubmitInProgress) {
                 console.log('✅ Final form submission completed!');
-                console.log('⏱️ Window will close in 3 seconds...');
-                setTimeout(() => {
-                  console.log('👋 Closing window');
-                  window.close();
-                }, 3000);
+                showClosingCountdown();
               }
               return response;
             })
@@ -233,11 +282,7 @@
               console.log('✅ XHR completed with status:', this.status);
               if (finalSubmitInProgress && this.status >= 200 && this.status < 400) {
                 console.log('✅ Final form submission completed via XHR!');
-                console.log('⏱️ Window will close in 3 seconds...');
-                setTimeout(() => {
-                  console.log('👋 Closing window');
-                  window.close();
-                }, 3000);
+                showClosingCountdown();
               }
             }
             if (originalOnReadyStateChange) {
@@ -338,6 +383,36 @@
             }
           });
         }, 500);
+
+        // Monitor for success message - alternative detection method
+        setTimeout(() => {
+          const observer = new MutationObserver((mutations) => {
+            for (let mutation of mutations) {
+              // Check if success message appeared
+              if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                const statusElements = document.querySelectorAll('status, [role="status"], [class*="success"], [class*="accepted"]');
+                for (let el of statusElements) {
+                  if (el.textContent && el.textContent.includes('приняты')) {
+                    console.log('✅ SUCCESS MESSAGE DETECTED - Form data accepted!');
+                    if (!finalSubmitInProgress) {
+                      // Force close even if button wasn't clicked
+                      console.log('⚠️ Forcing close from success message detection');
+                      showClosingCountdown();
+                    }
+                  }
+                }
+              }
+            }
+          });
+          
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true
+          });
+          
+          console.log('📊 MutationObserver started for success message detection');
+        }, 1000);
 
         // Also listen for form init to pass params via setProperty and move hidden fields into form
         window.addEventListener('b24:form:init', function(ev){
