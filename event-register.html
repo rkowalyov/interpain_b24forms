@@ -47,9 +47,6 @@
       const API_BASE = window.EVENT_API_BASE || '/api/event';
       const apiUrl = `${API_BASE}/${encodeURIComponent(id)}`;
 
-      // Start loading the Bitrix loader ASAP so it can initialize while we fetch event data
-      loadB24();
-
       fetch(apiUrl, {credentials:'same-origin'})
         .then(resp => {
           if (!resp.ok) throw new Error('API response ' + resp.status);
@@ -69,7 +66,8 @@
           console.warn('Event API unavailable:', err);
         })
         .finally(() => {
-          console.log('Event fetch finished');
+          console.log('Event fetch finished, loading Bitrix form...');
+          loadB24();
         });
 
       function formatDate(d){
@@ -99,74 +97,20 @@
           try { container.innerHTML = ''; } catch (e) {}
         }
         console.log('Inserting Bitrix loader script into container');
-        // attach a timestamp param to bust caches; if loaderBase is proxied (relative), use ts
-        const ts = Date.now();
-        const loaderUrl = loaderBase + (loaderBase.indexOf('?') === -1 ? '?ts=' + ts : '&ts=' + ts);
+        // Build query string with form parameters to pass to Bitrix loader
+        const queryParams = new URLSearchParams();
+        queryParams.set('ts', Date.now());
+        queryParams.set('EVPASSPORT_ID', id);
+        if (eventName) queryParams.set('EVENT_NAME', eventName);
+        if (eventDate) queryParams.set('EVENT_DATE', eventDate);
+        if (eventCity) queryParams.set('EVENT_CITY', eventCity);
+        const loaderUrl = loaderBase + '?' + queryParams.toString();
 
         // Load via proxy src — proxy is on same domain so content blockers won't block it.
         script.src = loaderUrl;
         container.appendChild(script);
         console.log('Appended Bitrix loader via proxy', loaderUrl);
-
-        window.addEventListener('b24:form:init', function(ev){
-          try{
-            const detail = ev && ev.detail;
-            console.log('b24:form:init fired, detail:', detail);
-            // Bitrix passes the form api object as ev.detail directly or as ev.detail[0]
-            const form = (detail && typeof detail.setProperty === 'function') ? detail
-              : (detail && detail[0] && typeof detail[0].setProperty === 'function') ? detail[0]
-              : (detail && detail.form && typeof detail.form.setProperty === 'function') ? detail.form
-              : null;
-            console.log('form object found:', !!form, 'setProperty:', form && typeof form.setProperty);
-            if (!form || typeof form.setProperty !== 'function') {
-              console.warn('b24:form:init — no setProperty on form, detail was:', JSON.stringify(detail, null, 2));
-              return;
-            }
-            form.setProperty('EVPASSPORT_ID', id);
-            form.setProperty('EVENT_NAME', eventName || `Мероприятие №${id}`);
-            form.setProperty('EVENT_DATE', eventDate || '');
-            form.setProperty('EVENT_CITY', eventCity || '');
-            console.log('setProperty calls done for id=' + id);
-          }catch(e){console.error('b24:init handler error',e)}
-        });
-
-        // Fallback: poll for the Bitrix form object and call setProperty when it becomes available.
-        (function fallbackSetProperties(){
-          function trySet(form){
-            try{
-              if (!form || typeof form.setProperty !== 'function') return false;
-              form.setProperty('EVPASSPORT_ID', id);
-              form.setProperty('EVENT_NAME', eventName || `Мероприятие №${id}`);
-              form.setProperty('EVENT_DATE', eventDate || '');
-              form.setProperty('EVENT_CITY', eventCity || '');
-              return true;
-            }catch(e){return false}
-          }
-
-          // First try common locations
-          if (trySet(window.BX24 && window.BX24.form)) return;
-
-          // Poll for up to ~10 seconds
-          let attempts = 0;
-          const maxAttempts = 20;
-          const interval = setInterval(() => {
-            attempts += 1;
-            // Check common globals or previously emitted event detail
-            if (trySet(window.BX24 && window.BX24.form)) { clearInterval(interval); return; }
-
-            // Sometimes the form API is attached under other internal objects — try to discover setProperty on window
-            for (const k in window) {
-              try{
-                const v = window[k];
-                if (v && typeof v === 'object' && typeof v.setProperty === 'function'){
-                  if (trySet(v)) { clearInterval(interval); return; }
-                }
-              }catch(e){}
-            }
-
-            if (attempts >= maxAttempts) clearInterval(interval);
-          }, 500);
-        })();
+        console.log('Form params passed in URL: EVPASSPORT_ID=' + id);
       }
     })();
   </script>
