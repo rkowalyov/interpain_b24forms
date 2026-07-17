@@ -20,6 +20,11 @@
     <h1 id="title">Регистрация на мероприятие</h1>
     <div id="info" class="meta"></div>
     <div id="error" class="error" style="display:none"></div>
+    <!-- Hidden form fields to pass parameters to Bitrix -->
+    <input type="hidden" id="hidden_evpassport_id" name="EVPASSPORT_ID" value="">
+    <input type="hidden" id="hidden_event_name" name="EVENT_NAME" value="">
+    <input type="hidden" id="hidden_event_date" name="EVENT_DATE" value="">
+    <input type="hidden" id="hidden_event_city" name="EVENT_CITY" value="">
     <div id="b24form_container"></div>
     <div class="hint">Если форма не загружается — свяжитесь с организатором.</div>
   </div>
@@ -67,6 +72,17 @@
         })
         .finally(() => {
           console.log('Event fetch finished, loading Bitrix form...');
+          // Populate hidden form fields with parameters
+          document.getElementById('hidden_evpassport_id').value = id;
+          document.getElementById('hidden_event_name').value = eventName || `Мероприятие №${id}`;
+          document.getElementById('hidden_event_date').value = eventDate || '';
+          document.getElementById('hidden_event_city').value = eventCity || '';
+          console.log('Hidden fields populated:', {
+            EVPASSPORT_ID: id,
+            EVENT_NAME: eventName,
+            EVENT_DATE: eventDate,
+            EVENT_CITY: eventCity
+          });
           loadB24();
         });
 
@@ -88,7 +104,12 @@
         script.async = true;
         script.setAttribute('data-b24-form', 'inline/739/0zko7k');
         script.setAttribute('data-skip-moving', 'true');
-        // integer chunk like original snippet
+        // Pass parameters as data attributes for Bitrix
+        script.setAttribute('data-EVPASSPORT_ID', id);
+        script.setAttribute('data-EVENT_NAME', eventName || `Мероприятие №${id}`);
+        script.setAttribute('data-EVENT_DATE', eventDate || '');
+        script.setAttribute('data-EVENT_CITY', eventCity || '');
+        
         // Always clear the container and insert a fresh script element.
         // This avoids rendering any escaped loader text and guarantees the loader is executed.
         try {
@@ -96,7 +117,7 @@
         } catch (e) {
           try { container.innerHTML = ''; } catch (e) {}
         }
-        console.log('Inserting Bitrix loader script into container');
+        console.log('Inserting Bitrix loader script into container with params:', {id, eventName, eventDate, eventCity});
         // Setup window variables before loading the script so Bitrix can read them
         window.B24_FORM_PARAMS = {
           EVPASSPORT_ID: id,
