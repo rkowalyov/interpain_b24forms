@@ -100,6 +100,28 @@
         const loaderBase = window.B24_LOADER_URL || '/api/loader';
         const container = document.getElementById('b24form_container');
 
+        // Always clear the container and insert a fresh script element.
+        // This avoids rendering any escaped loader text and guarantees the loader is executed.
+        try {
+          container.textContent = '';
+        } catch (e) {
+          try { container.innerHTML = ''; } catch (e) {}
+        }
+
+        // Move hidden fields into the container so they're together
+        const hiddenFields = [
+          document.getElementById('hidden_evpassport_id'),
+          document.getElementById('hidden_event_name'),
+          document.getElementById('hidden_event_date'),
+          document.getElementById('hidden_event_city')
+        ];
+        hiddenFields.forEach(field => {
+          if (field) {
+            container.appendChild(field);
+            console.log('Moved hidden field to container:', field.name);
+          }
+        });
+
         // Insert script using Bitrix recommended pattern with cache-busting timestamp
         const script = document.createElement('script');
         script.async = true;
@@ -111,13 +133,6 @@
         script.setAttribute('data-EVENT_DATE', eventDate || '');
         script.setAttribute('data-EVENT_CITY', eventCity || '');
         
-        // Always clear the container and insert a fresh script element.
-        // This avoids rendering any escaped loader text and guarantees the loader is executed.
-        try {
-          container.textContent = '';
-        } catch (e) {
-          try { container.innerHTML = ''; } catch (e) {}
-        }
         console.log('Inserting Bitrix loader script into container with params:', {id, eventName, eventDate, eventCity});
         // Setup window variables before loading the script so Bitrix can read them
         window.B24_FORM_PARAMS = {
