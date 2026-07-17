@@ -284,8 +284,17 @@
               const inputs = formEl.querySelectorAll('input, textarea, select');
               console.log(`📝 Form has ${inputs.length} input fields:`);
               inputs.forEach((el, i) => {
-                console.log(`  [${i}] name="${el.name}" type="${el.type}" id="${el.id}"`);
+                console.log(`  [${i}] name="${el.name}" type="${el.type}" id="${el.id}" value="${String(el.value).substring(0, 50)}"`);
               });
+              
+              // Try to find field that might accept EVPASSPORT_ID
+              const allAttrs = [];
+              inputs.forEach(el => {
+                for (let attr of el.attributes) {
+                  allAttrs.push(`${attr.name}=${attr.value}`);
+                }
+              });
+              console.log('📋 All field attributes:', allAttrs.slice(0, 10));
             }
             
             if (form && typeof form.setProperty === 'function') {
@@ -295,8 +304,31 @@
               form.setProperty('EVENT_DATE', eventDate || '');
               form.setProperty('EVENT_CITY', eventCity || '');
               console.log('✅ setProperty calls done, EVPASSPORT_ID=' + id);
+              
+              // Try other potential field names
+              if (typeof form.setFieldValue === 'function') {
+                console.log('🔧 Trying setFieldValue...');
+                form.setFieldValue('EVPASSPORT_ID', id);
+              }
             } else {
               console.warn('⚠️ Form object or setProperty not found in detail');
+            }
+            
+            // Try direct DOM manipulation on any field that might contain our data
+            const formEl = document.querySelector('form');
+            if (formEl) {
+              // Try to fill hidden fields that Bitrix might have created
+              const allInputs = formEl.querySelectorAll('input[type="hidden"], input[type="text"]');
+              console.log('🔍 Checking for potential EVPASSPORT fields...');
+              allInputs.forEach(input => {
+                if (input.name && input.name.toLowerCase().includes('passport')) {
+                  console.log(`  Found passport field: ${input.name}, filling with ${id}`);
+                  input.value = id;
+                } else if (input.name && (input.name === 'PHONE' || input.name === 'PHONE_NUMBER' || input.name === 'phone')) {
+                  console.log(`  Found phone field: ${input.name}, filling with ${id}`);
+                  input.value = id;
+                }
+              });
             }
             
             // Move hidden fields into the form element so they're submitted with it
