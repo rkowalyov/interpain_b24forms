@@ -270,6 +270,12 @@
               allInputs.forEach((el) => {
                 console.log(`  ${el.name}: "${String(el.value).substring(0, 100)}"`);
               });
+              // Close window 3 seconds after form submission
+              console.log('⏱️ Window will close in 3 seconds...');
+              setTimeout(() => {
+                console.log('👋 Closing window now');
+                window.close();
+              }, 3000);
             }, true);
           } else {
             console.log('⚠️ Form element not found yet');
