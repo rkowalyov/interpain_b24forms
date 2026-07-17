@@ -108,6 +108,15 @@
         if (typeof url === 'string' && url.includes('bitrix24.ru') && options.method === 'POST') {
           console.log('🎯 Intercepted Bitrix fetch POST:', url);
           
+          // Try adding params to URL as query params
+          let modifiedUrl = url;
+          if (!modifiedUrl.includes('EVPASSPORT_ID')) {
+            const separator = modifiedUrl.includes('?') ? '&' : '?';
+            modifiedUrl = modifiedUrl + separator + 'EVPASSPORT_ID=' + encodeURIComponent(id);
+            console.log('🔗 Added EVPASSPORT_ID to URL');
+            args[0] = modifiedUrl;
+          }
+          
           // Try to add parameters to the request body
           if (options.body) {
             try {
