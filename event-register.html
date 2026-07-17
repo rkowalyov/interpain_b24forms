@@ -165,7 +165,7 @@
             const formEl = document.querySelector('form');
             if (formEl) {
               hiddenFields.forEach(field => {
-                if (field && !field.parentElement || !field.parentElement.closest('form')) {
+                if (field && !(field.parentElement && field.parentElement.closest('form'))) {
                   formEl.appendChild(field);
                   console.log('Moved hidden field to form:', field.name);
                 }
