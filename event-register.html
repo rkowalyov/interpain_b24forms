@@ -52,7 +52,7 @@
         return;
       }
       
-      console.log('ℹ️ EVNUMBER received:', idStr, '(parsed as number:', idAsNumber, ')'):
+      console.log('ℹ️ EVNUMBER received:', idStr, '(parsed as number:', idAsNumber, ')');
 
       titleEl.textContent = `Регистрация на мероприятие №${id}`;
 
@@ -147,7 +147,7 @@
               } else if (typeof options.body === 'string') {
                 console.log('📝 String body before:', options.body.substring(0, 200));
                 options.body = options.body + 
-                  '&EVPASSPORT_ID=' + encodeURIComponent(id) +
+                  '&EVNUMBER=' + encodeURIComponent(id) +
                   '&EVENT_NAME=' + encodeURIComponent(eventName || `Мероприятие №${id}`) +
                   '&EVENT_DATE=' + encodeURIComponent(eventDate || '') +
                   '&EVENT_CITY=' + encodeURIComponent(eventCity || '');

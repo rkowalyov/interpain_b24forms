@@ -1,4 +1,4 @@
-const URL = process.env.URL || 'https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=845';
+const URL = process.env.URL || 'https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=845';
 
 (async () => {
   try {
