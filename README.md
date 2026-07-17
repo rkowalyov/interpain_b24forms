@@ -18,17 +18,32 @@ The page will set hidden form properties on `b24:form:init` using `form.setPrope
 
 ## Troubleshooting: EVNUMBER parameter arrives as 0
 
-If the `EVNUMBER` parameter is being transmitted but arrives in Bitrix as **0**, it's likely due to the field type configuration.
+If the `EVNUMBER` parameter is being transmitted but arrives in Bitrix as **0**, there are two solutions:
 
-### Solution:
+### ✅ Solution 1: Business Process (Recommended)
+
+Create a **Business Process** in Bitrix24 that:
+1. Reads value from a helper field
+2. Converts to number format
+3. Assigns to the EVNUMBER field
+
+**Benefits:**
+- ✅ No field type changes needed
+- ✅ Automatic processing
+- ✅ Full control over formatting
+- ✅ Scalable for other parameters
+
+See [BITRIX_AUTOMATION_SOLUTION.md](BITRIX_AUTOMATION_SOLUTION.md) for detailed setup.
+
+### ✅ Solution 2: Change Field Type
+
+If you prefer not to use a Business Process:
 
 1. Open Bitrix24 Admin: `https://your-domain.bitrix24.ru/admin/`
 2. Navigate to: **CRM** → **Channels** → **Forms**
 3. Edit your form and find the **EVNUMBER** field
 4. **Change field type** from **"Integer"** to **"Text"** (Целое число → Текст)
 5. Save changes
-
-The parameter should now be transmitted correctly and arrive as `845` instead of `0`.
 
 ### Additional debugging:
 
