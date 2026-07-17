@@ -43,6 +43,7 @@
       let eventName = '';
       let eventDate = '';
       let eventCity = '';
+      let finalSubmitInProgress = false; // Track if final submit button was clicked
 
       if (!id || isNaN(id)) {
         errorEl.textContent = 'Ошибка: параметр EVNUMBER не указан в URL или не является числом.';
@@ -98,6 +99,9 @@
       }
 
       function escapeHtml(s){return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;' }[c]))}
+
+      // Track if this is final form submission
+      // (already declared at top of function)
 
       // Intercept fetch requests to add our parameters
       const originalFetch = window.fetch;
@@ -162,7 +166,29 @@
           }
         }
         
-        return originalFetch.apply(this, args);
+        // Chain the fetch to detect successful completion
+        const fetchPromise = originalFetch.apply(this, args);
+        if (typeof url === 'string' && url.includes('bitrix24.ru') && options.method === 'POST') {
+          fetchPromise
+            .then(response => {
+              console.log('✅ Bitrix response received:', response.status);
+              // Only close window if this was the final submit (button clicked)
+              if (finalSubmitInProgress) {
+                console.log('✅ Final form submission completed!');
+                console.log('⏱️ Window will close in 3 seconds...');
+                setTimeout(() => {
+                  console.log('👋 Closing window');
+                  window.close();
+                }, 3000);
+              }
+              return response;
+            })
+            .catch(err => {
+              console.error('❌ Bitrix fetch error:', err);
+            });
+        }
+        
+        return fetchPromise;
       };
 
       // Also intercept XMLHttpRequest
@@ -170,6 +196,7 @@
       XMLHttpRequest.prototype.open = function(method, url, ...rest) {
         this._url = url;
         this._method = method;
+        this._isBitrixRequest = url && url.includes('bitrix24.ru');
         if (method === 'POST') {
           console.log('📤 XHR POST to:', url.substring(0, 100));
         }
@@ -178,6 +205,7 @@
 
       const originalSend = XMLHttpRequest.prototype.send;
       XMLHttpRequest.prototype.send = function(body) {
+        const self = this;
         if (this._url && this._url.includes('bitrix24.ru') && this._method === 'POST' && body) {
           console.log('🎯 Intercepted Bitrix XHR POST:', this._url);
           try {
@@ -197,6 +225,25 @@
           } catch (e) {
             console.error('❌ Error in XHR send:', e);
           }
+
+          // Listen for XHR completion to detect final submission
+          const originalOnReadyStateChange = this.onreadystatechange;
+          this.onreadystatechange = function() {
+            if (this.readyState === 4) {
+              console.log('✅ XHR completed with status:', this.status);
+              if (finalSubmitInProgress && this.status >= 200 && this.status < 400) {
+                console.log('✅ Final form submission completed via XHR!');
+                console.log('⏱️ Window will close in 3 seconds...');
+                setTimeout(() => {
+                  console.log('👋 Closing window');
+                  window.close();
+                }, 3000);
+              }
+            }
+            if (originalOnReadyStateChange) {
+              originalOnReadyStateChange.apply(this, arguments);
+            }
+          };
         }
         return originalSend.apply(this, [body]);
       };
@@ -270,16 +317,26 @@
               allInputs.forEach((el) => {
                 console.log(`  ${el.name}: "${String(el.value).substring(0, 100)}"`);
               });
-              // Close window 3 seconds after form submission
-              console.log('⏱️ Window will close in 3 seconds...');
-              setTimeout(() => {
-                console.log('👋 Closing window now');
-                window.close();
-              }, 3000);
+              // Note: Window closing is now handled by fetch interception for final submission
+              console.log('📤 Form submitted - waiting for server response...');
             }, true);
           } else {
             console.log('⚠️ Form element not found yet');
           }
+        }, 500);
+
+        // Also listen for "Отправить данные" button click to mark final submission
+        setTimeout(() => {
+          const buttons = document.querySelectorAll('button');
+          buttons.forEach(btn => {
+            if (btn.textContent.includes('Отправить данные')) {
+              console.log('✅ Found "Отправить данные" button, attaching click listener');
+              btn.addEventListener('click', () => {
+                console.log('🔴 FINAL SUBMIT BUTTON CLICKED - "Отправить данные"');
+                finalSubmitInProgress = true;
+              });
+            }
+          });
         }, 500);
 
         // Also listen for form init to pass params via setProperty and move hidden fields into form
