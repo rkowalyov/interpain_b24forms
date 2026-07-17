@@ -111,12 +111,22 @@
         window.addEventListener('b24:form:init', function(ev){
           try{
             const detail = ev && ev.detail;
-            const form = (detail && (detail[0] || detail.form)) || detail || window.BX24 && window.BX24.form;
-            if (!form || typeof form.setProperty !== 'function') return;
+            console.log('b24:form:init fired, detail:', detail);
+            // Bitrix passes the form api object as ev.detail directly or as ev.detail[0]
+            const form = (detail && typeof detail.setProperty === 'function') ? detail
+              : (detail && detail[0] && typeof detail[0].setProperty === 'function') ? detail[0]
+              : (detail && detail.form && typeof detail.form.setProperty === 'function') ? detail.form
+              : null;
+            console.log('form object found:', !!form, 'setProperty:', form && typeof form.setProperty);
+            if (!form || typeof form.setProperty !== 'function') {
+              console.warn('b24:form:init — no setProperty on form, detail was:', JSON.stringify(detail, null, 2));
+              return;
+            }
             form.setProperty('EVPASSPORT_ID', id);
             form.setProperty('EVENT_NAME', eventName || `Мероприятие №${id}`);
             form.setProperty('EVENT_DATE', eventDate || '');
             form.setProperty('EVENT_CITY', eventCity || '');
+            console.log('setProperty calls done for id=' + id);
           }catch(e){console.error('b24:init handler error',e)}
         });
 
