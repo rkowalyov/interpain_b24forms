@@ -186,11 +186,11 @@
               for (let [key, value] of body.entries()) {
                 console.log(`  ${key}: ${String(value).substring(0, 50)}`);
               }
-              body.append('EVPASSPORT_ID', id);
+              body.append('EVNUMBER', id);
               body.append('EVENT_NAME', eventName || `Мероприятие №${id}`);
               body.append('EVENT_DATE', eventDate || '');
               body.append('EVENT_CITY', eventCity || '');
-              console.log('✅ Added params to FormData (EVPASSPORT_ID as:', typeof id, String(id), ')');
+              console.log('✅ Added params to FormData (EVNUMBER as:', typeof id, String(id), ')'):
             } else {
               console.log('📝 XHR body type:', typeof body, 'length:', body.length);
             }
@@ -295,7 +295,7 @@
                 console.log(`  [${i}] name="${el.name}" type="${el.type}" id="${el.id}" value="${String(el.value).substring(0, 50)}"`);
               });
               
-              // Try to find field that might accept EVPASSPORT_ID
+              // Try to find field that might accept EVNUMBER
               const allAttrs = [];
               inputs.forEach(el => {
                 for (let attr of el.attributes) {
