@@ -8,9 +8,9 @@
   <style>
     :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;color:#111}
     body{margin:0;background:#f7f7f8;padding:24px;display:flex;align-items:flex-start;justify-content:center}
-    .card{max-width:720px;width:100%;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(16,24,40,.08);padding:24px}
+    .card{max-width:720px;width:100%;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(16,24,40,.08);padding:24px;text-align:center}
     h1{font-size:20px;margin:0 0 12px}
-    .meta{color:#444;margin:6px 0}
+    .meta{color:#444;margin:6px 0;text-align:center}
     .error{color:#b00020;background:#fff0f1;padding:12px;border-radius:6px}
     .hint{color:#666;font-size:14px;margin-top:8px}
     #b24form_container{margin-top:18px}
@@ -31,7 +31,7 @@
 </head>
 <body>
   <div class="card">
-    <h1 id="title">Регистрация на мероприятие</h1>
+    <h1 id="title">Мероприятие</h1>
     <div id="info" class="meta"></div>
     <div id="venue-info" class="meta" style="display:none"></div>
     <div id="error" class="error" style="display:none"></div>
@@ -123,7 +123,7 @@
         return;
       }
 
-      titleEl.textContent = `Регистрация на мероприятие №${id}`;
+      titleEl.textContent = `Мероприятие №${id}`;
 
       const API_BASE = window.EVENT_API_BASE || '/api/event';
       const apiUrl = `${API_BASE}/${encodeURIComponent(id)}`;
@@ -175,10 +175,13 @@
           eventDate = data.date || data.event_date || '';
           eventCity = data.city || data.location || '';
           eventVenue = data.venue || '';
-          if (eventName) titleEl.textContent = `Регистрация: ${eventName}`;
+          if (eventName && eventCity) {
+            titleEl.textContent = `${eventName} (${eventCity})`;
+          } else if (eventName) {
+            titleEl.textContent = eventName;
+          }
           const parts = [];
           if (eventDate) parts.push(`Дата: ${formatDate(eventDate)}`);
-          if (eventCity) parts.push(`Город: ${escapeHtml(eventCity)}`);
           infoEl.textContent = parts.join(' • ');
           if (eventVenue) {
             venueInfoEl.innerHTML = `Место: ${escapeHtml(eventVenue)}`;
