@@ -45,7 +45,8 @@
     .skeleton-button{width:168px;height:42px;border-radius:999px;background:#dce4f0}
     .progress-bar{width:min(320px,72vw);height:8px;margin-top:2px;border-radius:999px;background:#e6ebf3;overflow:hidden}
     .progress-bar__fill{width:38%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#1e3a8a,#00a3ff);animation:progress-pulse 1.2s ease-in-out infinite}
-    .loading-state.is-hidden{display:none}
+    .loading-state,.skeleton-form{opacity:1;visibility:visible;transition:opacity .28s ease,visibility .28s ease}
+    .loading-state.is-hidden,.skeleton-form.is-hidden{opacity:0;visibility:hidden;pointer-events:none}
     @keyframes skeleton-shimmer{100%{transform:translateX(100%)}}
     @keyframes loader-orbit-spin{to{transform:rotate(360deg)}}
     @keyframes progress-pulse{0%{transform:translateX(-30%)}50%{transform:translateX(120%)}100%{transform:translateX(-30%)}}
@@ -256,14 +257,40 @@
       const apiUrl = `${API_BASE}/${encodeURIComponent(id)}`;
       let shouldLoadForm = false;
 
+      function hideLoadingElement(el) {
+        if (!el) return;
+        el.classList.add('is-hidden');
+        setTimeout(() => {
+          if (el.classList.contains('is-hidden')) {
+            el.style.display = 'none';
+          }
+        }, 300);
+      }
+
+      function showLoadingElement(el, displayValue) {
+        if (!el) return;
+        el.style.display = displayValue;
+        // Force style recalculation so transition works when un-hiding.
+        void el.offsetHeight;
+        el.classList.remove('is-hidden');
+      }
+
+      function hideLoadingHeaderState() {
+        hideLoadingElement(loadingStateEl);
+      }
+
+      function hideLoadingFormState() {
+        hideLoadingElement(loadingFormEl);
+      }
+
       function hideLoadingState() {
-        if (loadingStateEl) loadingStateEl.style.display = 'none';
-        if (loadingFormEl) loadingFormEl.style.display = 'none';
+        hideLoadingHeaderState();
+        hideLoadingFormState();
       }
 
       function showLoadingState() {
-        if (loadingStateEl) loadingStateEl.style.display = 'block';
-        if (loadingFormEl) loadingFormEl.style.display = 'flex';
+        showLoadingElement(loadingStateEl, 'block');
+        showLoadingElement(loadingFormEl, 'flex');
       }
 
       showLoadingState();
@@ -360,7 +387,7 @@
             venueInfoEl.textContent = '';
           }
           shouldLoadForm = true;
-          hideLoadingState();
+          hideLoadingHeaderState();
           window.debugLog('✅ Event data loaded');
         })
         .catch(err => {
@@ -707,7 +734,7 @@
             clearTimeout(initWatchTimer);
             initWatchTimer = null;
           }
-          hideLoadingState();
+          hideLoadingFormState();
           if (hintEl) hintEl.style.display = 'none';
           try{
             const form = ev?.detail?.object;
