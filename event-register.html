@@ -22,14 +22,32 @@
     .skeleton-title{height:38px;max-width:560px;margin:8px auto 16px;border-radius:12px}
     .skeleton-meta{height:18px;max-width:420px}
     .skeleton-meta + .skeleton-meta{max-width:320px;margin-top:12px}
-    .skeleton-form{height:240px;margin-top:22px;border-radius:18px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:14px}
-    .throbber{width:44px;height:44px;border-radius:50%;border:4px solid rgba(30,58,138,.14);border-top-color:#1e3a8a;animation:throbber-spin .9s linear infinite}
-    .loading-label{font-size:14px;color:#4b5563;font-weight:600;letter-spacing:.01em}
-    .progress-bar{width:min(320px,72vw);height:8px;border-radius:999px;background:#e6ebf3;overflow:hidden}
+    .skeleton-form{margin-top:22px;border-radius:22px;display:flex;justify-content:center;align-items:stretch}
+    .skeleton-form__card{position:relative;overflow:hidden;width:min(620px,100%);padding:20px 18px 18px;border-radius:22px;border:1px solid rgba(148,163,184,.22);background:linear-gradient(180deg,rgba(255,255,255,.96),rgba(246,249,255,.92));box-shadow:0 16px 42px rgba(15,23,42,.08);backdrop-filter:blur(8px)}
+    .skeleton-form__card::before{content:'';position:absolute;inset:-40% -20% auto auto;height:180px;width:180px;border-radius:50%;background:radial-gradient(circle,rgba(30,58,138,.10),transparent 70%);pointer-events:none}
+    .skeleton-form__top{display:flex;align-items:center;gap:16px;margin-bottom:18px}
+    .loader-orbit{position:relative;width:62px;height:62px;flex:none}
+    .loader-orbit span{position:absolute;inset:0;border-radius:50%;border:3px solid transparent;border-top-color:#1e3a8a;border-right-color:rgba(0,163,255,.5);animation:loader-orbit-spin 1.35s linear infinite}
+    .loader-orbit span:nth-child(2){inset:8px;animation-duration:1.8s;opacity:.78}
+    .loader-orbit span:nth-child(3){inset:16px;animation-duration:2.3s;opacity:.56}
+    .loader-orbit span:nth-child(4){inset:24px;animation-duration:2.9s;opacity:.36}
+    .loader-orbit::after{content:'';position:absolute;inset:21px;border-radius:50%;background:linear-gradient(135deg,#1e3a8a,#00a3ff);box-shadow:0 0 0 6px rgba(30,58,138,.08)}
+    .loading-copy{min-width:0;text-align:left}
+    .loading-label{font-size:14px;color:#0f172a;font-weight:700;letter-spacing:.01em;line-height:1.3}
+    .loading-subline{margin-top:4px;font-size:12px;color:#64748b;line-height:1.35}
+    .skeleton-form-preview{display:grid;gap:12px}
+    .skeleton-field{height:16px;border-radius:999px;background:#e9edf3}
+    .skeleton-field--wide{height:18px;max-width:100%}
+    .skeleton-field--row{display:grid;grid-template-columns:1fr 1fr;gap:12px;height:auto;background:transparent}
+    .skeleton-field--half{height:18px}
+    .skeleton-field--textarea{height:74px;border-radius:18px}
+    .skeleton-actions{display:flex;justify-content:flex-start;margin-top:6px}
+    .skeleton-button{width:168px;height:42px;border-radius:999px;background:#dce4f0}
+    .progress-bar{width:min(320px,72vw);height:8px;margin-top:2px;border-radius:999px;background:#e6ebf3;overflow:hidden}
     .progress-bar__fill{width:38%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#1e3a8a,#00a3ff);animation:progress-pulse 1.2s ease-in-out infinite}
     .loading-state.is-hidden{display:none}
     @keyframes skeleton-shimmer{100%{transform:translateX(100%)}}
-    @keyframes throbber-spin{to{transform:rotate(360deg)}}
+    @keyframes loader-orbit-spin{to{transform:rotate(360deg)}}
     @keyframes progress-pulse{0%{transform:translateX(-30%)}50%{transform:translateX(120%)}100%{transform:translateX(-30%)}}
     #b24form_container{margin-top:18px}
     .status-panel{display:none;margin-top:14px;border:1px solid #eceff3;border-radius:10px;padding:18px;background:#fafcff}
@@ -58,8 +76,17 @@
       .event-meta{font-size:16px;line-height:1.32}
       .hint{font-size:13px}
       #b24form_container{margin-top:14px}
-      .skeleton-form{height:200px}
+      .skeleton-form__card{padding:16px 14px 14px}
+      .skeleton-form__top{gap:12px;margin-bottom:14px}
+      .loader-orbit{width:52px;height:52px}
+      .loader-orbit span:nth-child(2){inset:7px}
+      .loader-orbit span:nth-child(3){inset:14px}
+      .loader-orbit span:nth-child(4){inset:21px}
+      .loader-orbit::after{inset:18px}
       .loading-label{font-size:13px}
+      .loading-subline{font-size:11px}
+      .skeleton-field--textarea{height:66px}
+      .skeleton-button{width:140px;height:38px}
       .post-submit-actions{left:12px;right:12px;transform:none;bottom:12px}
       .post-submit-btn{width:100%}
       .post-submit-note{font-size:11px}
@@ -96,9 +123,30 @@
     <input type="hidden" id="hidden_event_date" name="EVENT_DATE" value="">
     <input type="hidden" id="hidden_event_city" name="EVENT_CITY" value="">
     <div id="loading-form" class="skeleton skeleton-form" aria-hidden="true">
-      <div class="throbber"></div>
-      <div class="loading-label">Загружаем регистрационную форму</div>
-      <div class="progress-bar"><div class="progress-bar__fill"></div></div>
+      <div class="skeleton-form__card">
+        <div class="skeleton-form__top">
+          <div class="loader-orbit" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="loading-copy">
+            <div class="loading-label">Загружаем регистрационную форму</div>
+            <div class="loading-subline">Подготавливаем поля, проверяем доступность и открываем регистрацию.</div>
+            <div class="progress-bar"><div class="progress-bar__fill"></div></div>
+          </div>
+        </div>
+        <div class="skeleton-form-preview" aria-hidden="true">
+          <div class="skeleton-field skeleton-field--wide"></div>
+          <div class="skeleton-field skeleton-field--row">
+            <div class="skeleton-field skeleton-field--half"></div>
+            <div class="skeleton-field skeleton-field--half"></div>
+          </div>
+          <div class="skeleton-field skeleton-field--textarea"></div>
+          <div class="skeleton-actions"><div class="skeleton-button"></div></div>
+        </div>
+      </div>
     </div>
     <div id="b24form_container"></div>
     <div class="hint">Если форма не загружается — свяжитесь с организатором.</div>
