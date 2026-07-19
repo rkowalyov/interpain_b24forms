@@ -34,6 +34,7 @@
     .post-submit-btn:hover{background:#eef4ff}
     .post-submit-btn--primary{background:#1e3a8a;border-color:#1e3a8a;color:#fff}
     .post-submit-btn--primary:hover{background:#1b347d}
+    .post-submit-note{margin:8px 0 0;font-size:12px;line-height:1.3;color:#4b5563;text-align:center;background:rgba(255,255,255,.92);padding:4px 8px;border-radius:6px}
     @media (max-width: 768px){
       body{padding:12px}
       .card{padding:16px}
@@ -43,6 +44,7 @@
       #b24form_container{margin-top:14px}
       .post-submit-actions{left:12px;right:12px;transform:none;bottom:12px}
       .post-submit-btn{width:100%}
+      .post-submit-note{font-size:11px}
     }
   </style>
 </head>
@@ -62,6 +64,7 @@
     <div id="closing-notice" style="display:none;background:#e8f5e9;padding:12px;border-radius:6px;margin-top:12px;text-align:center;font-weight:bold;color:#2e7d32;font-size:16px"></div>
     <div id="post-submit-actions" class="post-submit-actions" aria-live="polite">
       <button type="button" id="btn-close-window" class="post-submit-btn post-submit-btn--primary">Закрыть окно</button>
+      <p class="post-submit-note">Если вкладка не закрылась, закройте ее вручную.</p>
     </div>
     <div id="debug-log" style="display:none;background:#f5f5f5;padding:12px;border-radius:6px;margin-top:12px;font-size:12px;max-height:200px;overflow-y:auto;border:1px solid #ddd;font-family:monospace"></div>
     <!-- Hidden form fields to pass parameters to Bitrix -->
@@ -130,7 +133,7 @@
           if (seconds === 0) {
             closingNotice.textContent = '👋 Закрытие...';
             window.debugLog('👋 Calling window.close()');
-            window.close();
+            attemptCloseWindow();
           } else {
             seconds--;
             setTimeout(updateNotice, 1000);
@@ -172,9 +175,32 @@
         if (hintEl) hintEl.style.display = 'none';
       }
 
+      function attemptCloseWindow() {
+        try {
+          window.close();
+        } catch (e) {
+          window.debugLog('⚠️ window.close() failed: ' + (e && e.message ? e.message : e));
+        }
+
+        // Some browsers block close for tabs not opened by script.
+        setTimeout(() => {
+          if (!window.closed) {
+            window.debugLog('ℹ️ Close blocked by browser, switching to blank page');
+            try {
+              window.location.replace('about:blank');
+            } catch (e) {
+              window.debugLog('⚠️ about:blank fallback failed');
+            }
+            setTimeout(() => {
+              try { window.close(); } catch (e) {}
+            }, 150);
+          }
+        }, 150);
+      }
+
       closeWindowBtn.addEventListener('click', () => {
         window.debugLog('🖱️ Manual close button clicked');
-        window.close();
+        attemptCloseWindow();
       });
 
       fetch(apiUrl, {credentials:'same-origin'})
@@ -253,6 +279,7 @@
 
       function markSubmitIntent(reason){
         submitIntentAt = Date.now();
+        postSubmitActionsEl.style.display = 'block';
         window.debugLog('🧭 Submit intent detected: ' + reason);
       }
 
