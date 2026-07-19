@@ -14,6 +14,19 @@
     .error{color:#b00020;background:#fff0f1;padding:12px;border-radius:6px}
     .hint{color:#666;font-size:14px;margin-top:8px}
     #b24form_container{margin-top:18px}
+    .status-panel{display:none;margin-top:14px;border:1px solid #eceff3;border-radius:10px;padding:18px;background:#fafcff}
+    .status-panel__icon{width:38px;height:38px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:10px}
+    .status-panel__title{font-size:20px;font-weight:700;line-height:1.25;margin:0 0 8px}
+    .status-panel__text{font-size:14px;line-height:1.45;color:#4b5563;margin:0}
+    .status-panel--not-found{background:#fff6f6;border-color:#ffd8d8}
+    .status-panel--not-found .status-panel__icon{background:#ffe5e5;color:#8b1f1f}
+    .status-panel--not-found .status-panel__title{color:#7f1d1d}
+    .status-panel--closed{background:#fff9ec;border-color:#ffe3ad}
+    .status-panel--closed .status-panel__icon{background:#ffecc4;color:#854d0e}
+    .status-panel--closed .status-panel__title{color:#854d0e}
+    .status-panel--error{background:#f4f8ff;border-color:#dbe8ff}
+    .status-panel--error .status-panel__icon{background:#e5efff;color:#1e3a8a}
+    .status-panel--error .status-panel__title{color:#1e3a8a}
   </style>
 </head>
 <body>
@@ -21,6 +34,11 @@
     <h1 id="title">Регистрация на мероприятие</h1>
     <div id="info" class="meta"></div>
     <div id="error" class="error" style="display:none"></div>
+    <div id="event-status" class="status-panel" aria-live="polite">
+      <div id="event-status-icon" class="status-panel__icon">!</div>
+      <h2 id="event-status-title" class="status-panel__title"></h2>
+      <p id="event-status-text" class="status-panel__text"></p>
+    </div>
     <div id="closing-notice" style="display:none;background:#e8f5e9;padding:12px;border-radius:6px;margin-top:12px;text-align:center;font-weight:bold;color:#2e7d32;font-size:16px"></div>
     <div id="debug-log" style="display:none;background:#f5f5f5;padding:12px;border-radius:6px;margin-top:12px;font-size:12px;max-height:200px;overflow-y:auto;border:1px solid #ddd;font-family:monospace"></div>
     <!-- Hidden form fields to pass parameters to Bitrix -->
@@ -41,6 +59,12 @@
       const titleEl = document.getElementById('title');
       const infoEl = document.getElementById('info');
       const errorEl = document.getElementById('error');
+      const formContainerEl = document.getElementById('b24form_container');
+      const hintEl = document.querySelector('.hint');
+      const statusPanelEl = document.getElementById('event-status');
+      const statusIconEl = document.getElementById('event-status-icon');
+      const statusTitleEl = document.getElementById('event-status-title');
+      const statusTextEl = document.getElementById('event-status-text');
       let eventName = '';
       let eventDate = '';
       let eventCity = '';
@@ -100,13 +124,48 @@
 
       const API_BASE = window.EVENT_API_BASE || '/api/event';
       const apiUrl = `${API_BASE}/${encodeURIComponent(id)}`;
+      let shouldLoadForm = false;
+
+      function showFormBlockedMessage(kind, title, text) {
+        titleEl.textContent = 'Регистрация на мероприятие';
+        infoEl.textContent = '';
+        errorEl.style.display = 'none';
+        statusPanelEl.className = `status-panel status-panel--${kind}`;
+        statusTitleEl.textContent = title;
+        statusTextEl.textContent = text;
+        statusIconEl.textContent = kind === 'closed' ? '!' : kind === 'error' ? '?' : 'x';
+        statusPanelEl.style.display = 'block';
+        formContainerEl.style.display = 'none';
+        if (hintEl) hintEl.style.display = 'none';
+      }
 
       fetch(apiUrl, {credentials:'same-origin'})
-        .then(resp => {
-          if (!resp.ok) throw new Error('API response ' + resp.status);
-          return resp.json();
+        .then(async (resp) => {
+          const data = await resp.json().catch(() => ({}));
+          return { ok: resp.ok, status: resp.status, data };
         })
-        .then(data => {
+        .then(({ ok, status, data }) => {
+          if (!ok) {
+            if (status === 404 || data.message === 'Мероприятие не найдено') {
+              showFormBlockedMessage('not-found', 'Мероприятие не найдено', 'Проверьте ссылку или обратитесь к организатору.');
+              window.debugLog('⛔ Event not found for EVNUMBER=' + id);
+              return;
+            }
+            throw new Error('API response ' + status);
+          }
+
+          if (data && data.found === false) {
+            showFormBlockedMessage('not-found', 'Мероприятие не найдено', 'Проверьте ссылку или обратитесь к организатору.');
+            window.debugLog('⛔ Event not found by payload for EVNUMBER=' + id);
+            return;
+          }
+
+          if (data && data.registrationOpen === false) {
+            showFormBlockedMessage('closed', 'Регистрация сейчас закрыта', 'Регистрация на это мероприятие временно недоступна.');
+            window.debugLog('⛔ Registration is closed for EVNUMBER=' + id + ', stateId=' + data.stateId);
+            return;
+          }
+
           eventName = data.name || data.title || '';
           eventDate = data.date || data.event_date || '';
           eventCity = data.city || data.location || '';
@@ -115,12 +174,17 @@
           if (eventDate) parts.push(`Дата: ${formatDate(eventDate)}`);
           if (eventCity) parts.push(`Город: ${escapeHtml(eventCity)}`);
           infoEl.textContent = parts.join(' • ');
+          shouldLoadForm = true;
           window.debugLog('✅ Event data loaded');
         })
         .catch(err => {
           window.debugLog('⚠️ Event API error: ' + err.message);
+          showFormBlockedMessage('error', 'Не удалось загрузить данные мероприятия', 'Попробуйте обновить страницу позже.');
         })
         .finally(() => {
+          if (!shouldLoadForm) {
+            return;
+          }
           window.debugLog('Loading Bitrix form...');
           document.getElementById('hidden_evnumber').value = id;
           document.getElementById('hidden_event_name').value = eventName || `Мероприятие №${id}`;

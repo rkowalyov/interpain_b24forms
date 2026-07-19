@@ -7,3 +7,6 @@ npm-debug.log
 coverage/
 .vercel
 .env*
+# Local secrets
+.env.local
+.env.*.local
