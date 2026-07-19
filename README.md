@@ -13,6 +13,7 @@ Configuration options (optional):
 
 - `window.B24_LOADER_URL` — override Bitrix24 loader script URL if needed (default loader URL is used otherwise).
 - `window.EVENT_API_BASE` — base URL used to fetch event data; default is `/api/event`. The page requests `EVENT_API_BASE/{EVNUMBER}` and expects JSON `{ name, date, city }`.
+- `B24_DEFAULT_FORM_ID` (Vercel env var) — default CRM form ID used by `/api/loader` when `CRMFNUMBER` is missing/invalid/unavailable. Default value is `739`.
 
 The page will set hidden form properties on `b24:form:init` using `form.setProperty`: `EVNUMBER`, `EVENT_NAME`, `EVENT_DATE`, `EVENT_CITY`.
 

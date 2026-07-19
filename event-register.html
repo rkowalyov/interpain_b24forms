@@ -81,17 +81,15 @@
       const params = new URLSearchParams(location.search);
       const idStr = params.get('EVNUMBER');
       const id = idStr ? parseInt(idStr, 10) : null;
-      const DEFAULT_FORM_ID = 739;
+      const FALLBACK_FORM_ID = 739;
       const DEFAULT_FORM_CODE = '0zko7k';
       const formIdStr = params.get('CRMFNUMBER');
       const formCodeStr = params.get('CRMFHASH') || params.get('CRMFCODE');
+      const hasExplicitFormCode = Boolean(formCodeStr && /^[a-zA-Z0-9]+$/.test(formCodeStr));
       const parsedFormId = formIdStr ? parseInt(formIdStr, 10) : NaN;
-      const selectedFormId = Number.isInteger(parsedFormId) && parsedFormId > 0
-        ? parsedFormId
-        : DEFAULT_FORM_ID;
-      const selectedFormCode = (formCodeStr && /^[a-zA-Z0-9]+$/.test(formCodeStr))
-        ? formCodeStr
-        : (window.B24_FORM_CODE || DEFAULT_FORM_CODE);
+      const requestedFormId = Number.isInteger(parsedFormId) && parsedFormId > 0 ? parsedFormId : null;
+      let runtimeDefaultFormId = FALLBACK_FORM_ID;
+      let runtimeDefaultFormCode = window.B24_FORM_CODE || DEFAULT_FORM_CODE;
       const idAsNumber = id;
       const titleEl = document.getElementById('title');
       const infoEl = document.getElementById('info');
@@ -155,10 +153,10 @@
       };
       
       window.debugLog('🌍 Page initialized, EVNUMBER=' + idStr);
-      if (formIdStr && selectedFormId === DEFAULT_FORM_ID) {
-        window.debugLog('⚠️ Invalid CRMFNUMBER, fallback to default form 739: ' + formIdStr);
+      if (formIdStr && !requestedFormId) {
+        window.debugLog('⚠️ Invalid CRMFNUMBER, fallback to default form: ' + formIdStr);
       }
-      window.debugLog('🧩 Selected CRM form id: ' + selectedFormId);
+      window.debugLog('🧩 Requested CRM form id: ' + (requestedFormId || 'default'));
       if (formCodeStr) {
         window.debugLog('🔐 Form code from URL detected');
       }
@@ -473,13 +471,59 @@
         return originalSend.apply(this, [body]);
       };
 
-      function loadB24(){
+      async function resolveFormConfig(loaderBase) {
+        try {
+          const defaultMetaUrl = loaderBase + '?meta=1&ts=' + Date.now();
+          const defaultResp = await fetch(defaultMetaUrl, { credentials: 'same-origin' });
+          if (defaultResp.ok) {
+            const defaultMeta = await defaultResp.json();
+            const defaultId = Number(defaultMeta && (defaultMeta.defaultFormId || defaultMeta.resolvedFormId));
+            const defaultSec = defaultMeta && defaultMeta.sec;
+            if (Number.isInteger(defaultId) && defaultId > 0) {
+              runtimeDefaultFormId = defaultId;
+            }
+            if (/^[a-zA-Z0-9]+$/.test(String(defaultSec || ''))) {
+              runtimeDefaultFormCode = defaultSec;
+            }
+            window.debugLog('⚙️ Runtime default CRM form: ' + runtimeDefaultFormId);
+          }
+        } catch (e) {
+          window.debugLog('⚠️ Failed to resolve runtime default form, using fallback 739');
+        }
+
+        const targetFormId = requestedFormId || runtimeDefaultFormId;
+        const targetFormCode = hasExplicitFormCode ? formCodeStr : runtimeDefaultFormCode;
+
+        if (hasExplicitFormCode || targetFormId === runtimeDefaultFormId) {
+          return { formId: targetFormId, formCode: targetFormCode };
+        }
+
+        try {
+          const metaUrl = loaderBase + '?meta=1&ts=' + Date.now() + '&formId=' + encodeURIComponent(targetFormId);
+          const resp = await fetch(metaUrl, { credentials: 'same-origin' });
+          if (!resp.ok) throw new Error('meta response ' + resp.status);
+          const meta = await resp.json();
+          const resolvedId = Number(meta && meta.resolvedFormId);
+          const resolvedCode = meta && meta.sec;
+          if (Number.isInteger(resolvedId) && resolvedId > 0 && /^[a-zA-Z0-9]+$/.test(String(resolvedCode || ''))) {
+            window.debugLog('✅ Resolved form config from loader meta: id=' + resolvedId);
+            return { formId: resolvedId, formCode: resolvedCode };
+          }
+        } catch (e) {
+          window.debugLog('⚠️ Failed to resolve form meta for CRMFNUMBER=' + targetFormId + ': ' + (e && e.message ? e.message : e));
+        }
+
+        return { formId: targetFormId, formCode: targetFormCode };
+      }
+
+      async function loadB24(){
         window.debugLog('🚀 loadB24 started');
         const loaderBase = window.B24_LOADER_URL || '/api/loader';
         const container = document.getElementById('b24form_container');
         let fallbackUsed = false;
         let initWatchTimer = null;
         let formInitialized = false;
+        const resolvedConfig = await resolveFormConfig(loaderBase);
 
         try {
           container.textContent = '';
@@ -503,14 +547,14 @@
           script.src = loaderBase + '?ts=' + Date.now() + '&formId=' + encodeURIComponent(formId);
 
           script.onerror = function() {
-            if (fallbackUsed || formId === DEFAULT_FORM_ID) {
+            if (fallbackUsed || formId === runtimeDefaultFormId) {
               window.debugLog('❌ Bitrix loader failed to load');
               return;
             }
 
             fallbackUsed = true;
-            window.debugLog('⚠️ Loader for CRMFNUMBER=' + formId + ' failed, fallback to 739');
-            attachLoader(DEFAULT_FORM_ID, DEFAULT_FORM_CODE);
+            window.debugLog('⚠️ Loader for CRMFNUMBER=' + formId + ' failed, fallback to default form ' + runtimeDefaultFormId);
+            attachLoader(runtimeDefaultFormId, runtimeDefaultFormCode);
           };
 
           container.appendChild(script);
@@ -522,23 +566,23 @@
 
           initWatchTimer = setTimeout(() => {
             if (formInitialized) return;
-            if (fallbackUsed || formId === DEFAULT_FORM_ID) {
+            if (fallbackUsed || formId === runtimeDefaultFormId) {
               window.debugLog('❌ Form did not initialize');
               return;
             }
 
             fallbackUsed = true;
-            window.debugLog('⚠️ Form init timeout for CRMFNUMBER=' + formId + ', fallback to 739');
+            window.debugLog('⚠️ Form init timeout for CRMFNUMBER=' + formId + ', fallback to default form ' + runtimeDefaultFormId);
             try {
               container.textContent = '';
             } catch (e) {
               try { container.innerHTML = ''; } catch (e) {}
             }
-            attachLoader(DEFAULT_FORM_ID, DEFAULT_FORM_CODE);
+            attachLoader(runtimeDefaultFormId, runtimeDefaultFormCode);
           }, 5000);
         }
 
-        attachLoader(selectedFormId, selectedFormCode);
+        attachLoader(resolvedConfig.formId, resolvedConfig.formCode);
 
         // Monitor form submission after it appears
         setTimeout(() => {
