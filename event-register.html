@@ -50,7 +50,8 @@
     @keyframes skeleton-shimmer{100%{transform:translateX(100%)}}
     @keyframes loader-orbit-spin{to{transform:rotate(360deg)}}
     @keyframes progress-pulse{0%{transform:translateX(-30%)}50%{transform:translateX(120%)}100%{transform:translateX(-30%)}}
-    #b24form_container{margin-top:18px}
+    #b24form_container{margin-top:18px;opacity:0;transform:translateY(8px);transition:opacity .28s ease,transform .28s ease}
+    #b24form_container.is-ready{opacity:1;transform:translateY(0)}
     .status-panel{display:none;margin-top:14px;border:1px solid #eceff3;border-radius:10px;padding:18px;background:#fafcff}
     .status-panel__icon{width:38px;height:38px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:10px}
     .status-panel__title{font-size:20px;font-weight:700;line-height:1.25;margin:0 0 8px}
@@ -302,6 +303,7 @@
         venueInfoEl.textContent = '';
         errorEl.style.display = 'none';
         hideLoadingState();
+        formContainerEl.classList.remove('is-ready');
         statusPanelEl.className = `status-panel status-panel--${kind}`;
         statusTitleEl.textContent = title;
         statusTextEl.textContent = text;
@@ -651,6 +653,7 @@
         } catch (e) {
           try { container.innerHTML = ''; } catch (e) {}
         }
+        container.classList.remove('is-ready');
         
         window.B24_FORM_PARAMS = {
           EVNUMBER: id,
@@ -735,6 +738,9 @@
             initWatchTimer = null;
           }
           hideLoadingFormState();
+          requestAnimationFrame(() => {
+            container.classList.add('is-ready');
+          });
           if (hintEl) hintEl.style.display = 'none';
           try{
             const form = ev?.detail?.object;
