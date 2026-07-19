@@ -29,6 +29,13 @@
     .status-panel--error{background:#f4f8ff;border-color:#dbe8ff}
     .status-panel--error .status-panel__icon{background:#e5efff;color:#1e3a8a}
     .status-panel--error .status-panel__title{color:#1e3a8a}
+    .post-submit-actions{display:none;margin-top:14px;padding:14px;border:1px solid #dbe8ff;background:#f8fbff;border-radius:10px;text-align:center}
+    .post-submit-actions__title{font-size:16px;color:#1e3a8a;margin:0 0 10px;font-weight:600}
+    .post-submit-actions__buttons{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .post-submit-btn{border:1px solid #c8d9ff;background:#fff;color:#1e3a8a;border-radius:8px;padding:10px 14px;font-size:14px;line-height:1;cursor:pointer}
+    .post-submit-btn:hover{background:#eef4ff}
+    .post-submit-btn--primary{background:#1e3a8a;border-color:#1e3a8a;color:#fff}
+    .post-submit-btn--primary:hover{background:#1b347d}
     @media (max-width: 768px){
       body{padding:12px}
       .card{padding:16px}
@@ -36,6 +43,8 @@
       .event-meta{font-size:16px;line-height:1.32}
       .hint{font-size:13px}
       #b24form_container{margin-top:14px}
+      .post-submit-actions__buttons{flex-direction:column}
+      .post-submit-btn{width:100%}
     }
   </style>
 </head>
@@ -53,6 +62,13 @@
       </div>
     </div>
     <div id="closing-notice" style="display:none;background:#e8f5e9;padding:12px;border-radius:6px;margin-top:12px;text-align:center;font-weight:bold;color:#2e7d32;font-size:16px"></div>
+    <div id="post-submit-actions" class="post-submit-actions" aria-live="polite">
+      <p class="post-submit-actions__title">Если окно не закрылось автоматически:</p>
+      <div class="post-submit-actions__buttons">
+        <button type="button" id="btn-close-window" class="post-submit-btn post-submit-btn--primary">Закрыть окно</button>
+        <button type="button" id="btn-return-site" class="post-submit-btn">Вернуться на сайт</button>
+      </div>
+    </div>
     <div id="debug-log" style="display:none;background:#f5f5f5;padding:12px;border-radius:6px;margin-top:12px;font-size:12px;max-height:200px;overflow-y:auto;border:1px solid #ddd;font-family:monospace"></div>
     <!-- Hidden form fields to pass parameters to Bitrix -->
     <input type="hidden" id="hidden_evnumber" name="EVNUMBER" value="">
@@ -79,11 +95,16 @@
       const statusIconEl = document.getElementById('event-status-icon');
       const statusTitleEl = document.getElementById('event-status-title');
       const statusTextEl = document.getElementById('event-status-text');
+      const postSubmitActionsEl = document.getElementById('post-submit-actions');
+      const closeWindowBtn = document.getElementById('btn-close-window');
+      const returnSiteBtn = document.getElementById('btn-return-site');
       let eventName = '';
       let eventDate = '';
       let eventCity = '';
       let eventVenue = '';
       let closingStarted = false;
+      let submitIntentAt = 0;
+      const SUBMIT_INTENT_WINDOW_MS = 120000;
       
       // Global logging function
       window.debugLog = (msg) => {
@@ -104,6 +125,7 @@
         closingStarted = true;
         
         const closingNotice = document.getElementById('closing-notice');
+        postSubmitActionsEl.style.display = 'block';
         window.debugLog('✅ showClosingCountdown called!');
         
         let seconds = 3;
@@ -153,8 +175,23 @@
         statusIconEl.textContent = kind === 'closed' ? '!' : kind === 'error' ? '?' : 'x';
         statusPanelEl.style.display = 'block';
         formContainerEl.style.display = 'none';
+        postSubmitActionsEl.style.display = 'none';
         if (hintEl) hintEl.style.display = 'none';
       }
+
+      closeWindowBtn.addEventListener('click', () => {
+        window.debugLog('🖱️ Manual close button clicked');
+        window.close();
+      });
+
+      returnSiteBtn.addEventListener('click', () => {
+        const fallback = '/';
+        const configured = window.EVENT_RETURN_URL;
+        const ref = document.referrer;
+        const target = configured || ref || fallback;
+        window.debugLog('↩️ Return button clicked: ' + target);
+        window.location.href = target;
+      });
 
       fetch(apiUrl, {credentials:'same-origin'})
         .then(async (resp) => {
@@ -230,6 +267,71 @@
         return String(s).replace(/[&<>"']/g, c => map[c]);
       }
 
+      function markSubmitIntent(reason){
+        submitIntentAt = Date.now();
+        window.debugLog('🧭 Submit intent detected: ' + reason);
+      }
+
+      function hasRecentSubmitIntent(){
+        return submitIntentAt > 0 && (Date.now() - submitIntentAt) <= SUBMIT_INTENT_WINDOW_MS;
+      }
+
+      function isBitrixUrl(url){
+        return typeof url === 'string' && url.includes('bitrix24.ru');
+      }
+
+      function looksLikeRealFormPayload(body){
+        const isInterestingKey = (key) => {
+          const k = String(key || '').toLowerCase();
+          if (!k) return false;
+          if (k === 'evnumber' || k === 'event_name' || k === 'event_date' || k === 'event_city') {
+            return false;
+          }
+          return /(name|lastname|surname|phone|email|contact|consent|message|comment|company|form|crm)/i.test(k);
+        };
+
+        if (!body) return false;
+
+        if (body instanceof FormData) {
+          let hasInteresting = false;
+          let count = 0;
+          for (const [key] of body.entries()) {
+            count++;
+            if (isInterestingKey(key)) {
+              hasInteresting = true;
+              break;
+            }
+          }
+          return hasInteresting || count >= 5;
+        }
+
+        if (body instanceof URLSearchParams) {
+          let hasInteresting = false;
+          let count = 0;
+          for (const key of body.keys()) {
+            count++;
+            if (isInterestingKey(key)) {
+              hasInteresting = true;
+              break;
+            }
+          }
+          return hasInteresting || count >= 5;
+        }
+
+        if (typeof body === 'string') {
+          return /(name|lastname|phone|email|contact|consent|company|comment)/i.test(body);
+        }
+
+        return false;
+      }
+
+      function shouldCloseAfterRequest(url, method, body){
+        if (!isBitrixUrl(url)) return false;
+        if (String(method || 'GET').toUpperCase() !== 'POST') return false;
+        if (hasRecentSubmitIntent()) return true;
+        return looksLikeRealFormPayload(body);
+      }
+
       // Track if this is final form submission
       // (already declared at top of function)
 
@@ -238,14 +340,17 @@
       window.fetch = function(...args) {
         const url = args[0];
         const options = args[1] || {};
+        const method = String(options.method || 'GET').toUpperCase();
+        const requestUrl = typeof url === 'string' ? url : (url && url.url ? url.url : '');
+        const shouldCloseForThisRequest = shouldCloseAfterRequest(requestUrl, method, options.body);
         
         // Log all POST requests for debugging
-        if (typeof url === 'string' && options.method === 'POST') {
-          window.debugLog('📤 POST to: ' + url.substring(0, 60));
+        if (typeof requestUrl === 'string' && method === 'POST') {
+          window.debugLog('📤 POST to: ' + requestUrl.substring(0, 60));
         }
         
         // If this looks like a Bitrix form submission (POST to bitrix24.ru)
-        if (typeof url === 'string' && url.includes('bitrix24.ru') && options.method === 'POST') {
+        if (isBitrixUrl(requestUrl) && method === 'POST') {
           window.debugLog('🎯 Bitrix POST detected');
           
           // Try adding params to URL as query params
@@ -271,13 +376,16 @@
         const fetchPromise = originalFetch.apply(this, args);
         
         // Monitor all responses for debugging
-        if (typeof url === 'string' && url.includes('bitrix24.ru')) {
+        if (isBitrixUrl(requestUrl) && method === 'POST') {
           fetchPromise
             .then(response => {
               window.debugLog(`✅ Bitrix response: ${response.status}`);
-              // Close window on successful response
-              window.debugLog('💚 Triggering close sequence');
-              window.showClosingCountdown();
+              if (response.status >= 200 && response.status < 400 && shouldCloseForThisRequest) {
+                window.debugLog('💚 Triggering close sequence');
+                window.showClosingCountdown();
+              } else {
+                window.debugLog('ℹ️ Close sequence skipped (not a final form submit)');
+              }
               return response;
             })
             .catch(err => {
@@ -292,16 +400,17 @@
       const originalOpen = XMLHttpRequest.prototype.open;
       XMLHttpRequest.prototype.open = function(method, url, ...rest) {
         this._url = url;
-        this._method = method;
-        if (method === 'POST') {
+        this._method = String(method || 'GET').toUpperCase();
+        if (this._method === 'POST') {
           window.debugLog('📤 XHR POST to: ' + url.substring(0, 60));
         }
-        return originalOpen.apply(this, [method, url, ...rest]);
+        return originalOpen.apply(this, [this._method, url, ...rest]);
       };
 
       const originalSend = XMLHttpRequest.prototype.send;
       XMLHttpRequest.prototype.send = function(body) {
-        if (this._url && this._url.includes('bitrix24.ru') && this._method === 'POST' && body) {
+        const shouldCloseForThisRequest = shouldCloseAfterRequest(this._url, this._method, body);
+        if (isBitrixUrl(this._url) && this._method === 'POST' && body) {
           window.debugLog('🎯 Bitrix XHR detected');
           try {
             if (body instanceof FormData) {
@@ -320,9 +429,11 @@
           this.onreadystatechange = function() {
             if (this.readyState === 4) {
               window.debugLog(`✅ XHR completed: ${this.status}`);
-              if (this.status >= 200 && this.status < 400) {
+              if (this.status >= 200 && this.status < 400 && shouldCloseForThisRequest) {
                 window.debugLog('💚 Triggering close sequence from XHR');
                 window.showClosingCountdown();
+              } else {
+                window.debugLog('ℹ️ Close sequence skipped for XHR (not a final form submit)');
               }
             }
             if (originalOnReadyStateChange) {
@@ -368,10 +479,21 @@
           if (formEl) {
             window.debugLog('📝 Form found');
             formEl.addEventListener('submit', (e) => {
+              markSubmitIntent('native form submit');
               window.debugLog('🔴 Form submitted');
             }, true);
           }
         }, 500);
+
+        // Fallback for browsers where form submit event is not reliable.
+        container.addEventListener('click', (e) => {
+          const target = e.target;
+          if (!target || !target.closest) return;
+          const submitControl = target.closest('button[type="submit"], input[type="submit"], .b24-form-btn');
+          if (submitControl) {
+            markSubmitIntent('submit control click');
+          }
+        }, true);
 
         // Also listen for form init to pass params via setProperty
         window.addEventListener('b24:form:init', function(ev){
