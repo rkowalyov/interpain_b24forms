@@ -84,11 +84,14 @@
       const DEFAULT_FORM_ID = 739;
       const DEFAULT_FORM_CODE = '0zko7k';
       const formIdStr = params.get('CRMFNUMBER');
+      const formCodeStr = params.get('CRMFHASH') || params.get('CRMFCODE');
       const parsedFormId = formIdStr ? parseInt(formIdStr, 10) : NaN;
       const selectedFormId = Number.isInteger(parsedFormId) && parsedFormId > 0
         ? parsedFormId
         : DEFAULT_FORM_ID;
-      const selectedFormCode = window.B24_FORM_CODE || DEFAULT_FORM_CODE;
+      const selectedFormCode = (formCodeStr && /^[a-zA-Z0-9]+$/.test(formCodeStr))
+        ? formCodeStr
+        : (window.B24_FORM_CODE || DEFAULT_FORM_CODE);
       const idAsNumber = id;
       const titleEl = document.getElementById('title');
       const infoEl = document.getElementById('info');
@@ -156,6 +159,9 @@
         window.debugLog('⚠️ Invalid CRMFNUMBER, fallback to default form 739: ' + formIdStr);
       }
       window.debugLog('🧩 Selected CRM form id: ' + selectedFormId);
+      if (formCodeStr) {
+        window.debugLog('🔐 Form code from URL detected');
+      }
 
       if (!id || isNaN(id)) {
         errorEl.textContent = 'Ошибка: параметр EVNUMBER не указан в URL или не является числом.';
@@ -471,19 +477,15 @@
         window.debugLog('🚀 loadB24 started');
         const loaderBase = window.B24_LOADER_URL || '/api/loader';
         const container = document.getElementById('b24form_container');
-        let fallbackLoaderRequested = false;
+        let fallbackUsed = false;
+        let initWatchTimer = null;
+        let formInitialized = false;
 
         try {
           container.textContent = '';
         } catch (e) {
           try { container.innerHTML = ''; } catch (e) {}
         }
-
-        const script = document.createElement('script');
-        script.async = true;
-        script.setAttribute('data-b24-form', `inline/${selectedFormId}/${selectedFormCode}`);
-        script.setAttribute('data-skip-moving', 'true');
-        script.setAttribute('data-EVNUMBER', id);
         
         window.B24_FORM_PARAMS = {
           EVNUMBER: id,
@@ -491,22 +493,52 @@
           EVENT_DATE: eventDate || '',
           EVENT_CITY: eventCity || ''
         };
-        
-        const loaderUrl = loaderBase + '?ts=' + Date.now() + '&formId=' + encodeURIComponent(selectedFormId);
-        script.src = loaderUrl;
-        script.onerror = function() {
-          if (fallbackLoaderRequested || selectedFormId === DEFAULT_FORM_ID) {
-            window.debugLog('❌ Bitrix loader failed to load');
-            return;
+
+        function attachLoader(formId, formCode) {
+          const script = document.createElement('script');
+          script.async = true;
+          script.setAttribute('data-b24-form', `inline/${formId}/${formCode}`);
+          script.setAttribute('data-skip-moving', 'true');
+          script.setAttribute('data-EVNUMBER', id);
+          script.src = loaderBase + '?ts=' + Date.now() + '&formId=' + encodeURIComponent(formId);
+
+          script.onerror = function() {
+            if (fallbackUsed || formId === DEFAULT_FORM_ID) {
+              window.debugLog('❌ Bitrix loader failed to load');
+              return;
+            }
+
+            fallbackUsed = true;
+            window.debugLog('⚠️ Loader for CRMFNUMBER=' + formId + ' failed, fallback to 739');
+            attachLoader(DEFAULT_FORM_ID, DEFAULT_FORM_CODE);
+          };
+
+          container.appendChild(script);
+          window.debugLog('📥 Bitrix loader appended for form ' + formId);
+
+          if (initWatchTimer) {
+            clearTimeout(initWatchTimer);
           }
 
-          fallbackLoaderRequested = true;
-          window.debugLog('⚠️ Loader for CRMFNUMBER=' + selectedFormId + ' failed, fallback to 739');
-          script.setAttribute('data-b24-form', `inline/${DEFAULT_FORM_ID}/${selectedFormCode}`);
-          script.src = loaderBase + '?ts=' + Date.now() + '&formId=' + DEFAULT_FORM_ID;
-        };
-        container.appendChild(script);
-        window.debugLog('📥 Bitrix loader appended');
+          initWatchTimer = setTimeout(() => {
+            if (formInitialized) return;
+            if (fallbackUsed || formId === DEFAULT_FORM_ID) {
+              window.debugLog('❌ Form did not initialize');
+              return;
+            }
+
+            fallbackUsed = true;
+            window.debugLog('⚠️ Form init timeout for CRMFNUMBER=' + formId + ', fallback to 739');
+            try {
+              container.textContent = '';
+            } catch (e) {
+              try { container.innerHTML = ''; } catch (e) {}
+            }
+            attachLoader(DEFAULT_FORM_ID, DEFAULT_FORM_CODE);
+          }, 5000);
+        }
+
+        attachLoader(selectedFormId, selectedFormCode);
 
         // Monitor form submission after it appears
         setTimeout(() => {
@@ -532,6 +564,11 @@
 
         // Also listen for form init to pass params via setProperty
         window.addEventListener('b24:form:init', function(ev){
+          formInitialized = true;
+          if (initWatchTimer) {
+            clearTimeout(initWatchTimer);
+            initWatchTimer = null;
+          }
           try{
             const form = ev?.detail?.object;
             if (form && typeof form.setProperty === 'function') {
