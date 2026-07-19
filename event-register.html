@@ -29,9 +29,7 @@
     .status-panel--error{background:#f4f8ff;border-color:#dbe8ff}
     .status-panel--error .status-panel__icon{background:#e5efff;color:#1e3a8a}
     .status-panel--error .status-panel__title{color:#1e3a8a}
-    .post-submit-actions{display:none;margin-top:14px;padding:14px;border:1px solid #dbe8ff;background:#f8fbff;border-radius:10px;text-align:center}
-    .post-submit-actions__title{font-size:16px;color:#1e3a8a;margin:0 0 10px;font-weight:600}
-    .post-submit-actions__buttons{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .post-submit-actions{display:none;position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999}
     .post-submit-btn{border:1px solid #c8d9ff;background:#fff;color:#1e3a8a;border-radius:8px;padding:10px 14px;font-size:14px;line-height:1;cursor:pointer}
     .post-submit-btn:hover{background:#eef4ff}
     .post-submit-btn--primary{background:#1e3a8a;border-color:#1e3a8a;color:#fff}
@@ -43,7 +41,7 @@
       .event-meta{font-size:16px;line-height:1.32}
       .hint{font-size:13px}
       #b24form_container{margin-top:14px}
-      .post-submit-actions__buttons{flex-direction:column}
+      .post-submit-actions{left:12px;right:12px;transform:none;bottom:12px}
       .post-submit-btn{width:100%}
     }
   </style>
@@ -63,11 +61,7 @@
     </div>
     <div id="closing-notice" style="display:none;background:#e8f5e9;padding:12px;border-radius:6px;margin-top:12px;text-align:center;font-weight:bold;color:#2e7d32;font-size:16px"></div>
     <div id="post-submit-actions" class="post-submit-actions" aria-live="polite">
-      <p class="post-submit-actions__title">Если окно не закрылось автоматически:</p>
-      <div class="post-submit-actions__buttons">
-        <button type="button" id="btn-close-window" class="post-submit-btn post-submit-btn--primary">Закрыть окно</button>
-        <button type="button" id="btn-return-site" class="post-submit-btn">Вернуться на сайт</button>
-      </div>
+      <button type="button" id="btn-close-window" class="post-submit-btn post-submit-btn--primary">Закрыть окно</button>
     </div>
     <div id="debug-log" style="display:none;background:#f5f5f5;padding:12px;border-radius:6px;margin-top:12px;font-size:12px;max-height:200px;overflow-y:auto;border:1px solid #ddd;font-family:monospace"></div>
     <!-- Hidden form fields to pass parameters to Bitrix -->
@@ -97,7 +91,6 @@
       const statusTextEl = document.getElementById('event-status-text');
       const postSubmitActionsEl = document.getElementById('post-submit-actions');
       const closeWindowBtn = document.getElementById('btn-close-window');
-      const returnSiteBtn = document.getElementById('btn-return-site');
       let eventName = '';
       let eventDate = '';
       let eventCity = '';
@@ -182,15 +175,6 @@
       closeWindowBtn.addEventListener('click', () => {
         window.debugLog('🖱️ Manual close button clicked');
         window.close();
-      });
-
-      returnSiteBtn.addEventListener('click', () => {
-        const fallback = '/';
-        const configured = window.EVENT_RETURN_URL;
-        const ref = document.referrer;
-        const target = configured || ref || fallback;
-        window.debugLog('↩️ Return button clicked: ' + target);
-        window.location.href = target;
       });
 
       fetch(apiUrl, {credentials:'same-origin'})
