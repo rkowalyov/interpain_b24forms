@@ -162,7 +162,7 @@
       }
 
       if (!id || isNaN(id)) {
-        errorEl.textContent = 'Ошибка: параметр EVNUMBER не указан в URL или не является числом.';
+        errorEl.textContent = 'Неверно или не указан параметр для мероприятия';
         errorEl.style.display = 'block';
         titleEl.textContent = 'Регистрация на мероприятие';
         window.debugLog('❌ Invalid EVNUMBER: ' + idStr);
