@@ -41,6 +41,7 @@ const EVENT_ENTITY_TYPE_ID = Number(process.env.EVENT_ENTITY_TYPE_ID || 1036);
 const EVENT_STATE_FIELD = process.env.EVENT_STATE_FIELD || 'ufCrm21EventState';
 const EVENT_STATE_CODE_FIELD = process.env.EVENT_STATE_CODE_FIELD || 'ufCrm21_1739459683';
 const EVENT_OPEN_STATE_ID = Number(process.env.EVENT_OPEN_STATE_ID || 1111);
+const EVENT_TIME_ZONE = process.env.EVENT_TIME_ZONE || 'Europe/Moscow';
 
 function getWebhookBase() {
   const b24 = process.env.B24_WEBHOOK_URL && process.env.B24_WEBHOOK_URL.trim();
@@ -98,15 +99,21 @@ function formatEventDateRange(startValue, endValue) {
 
   if (!start && !end) return '';
 
-  const monthNames = [
-    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
-    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
-  ];
-  const fmt = (dt) => ({
-    day: dt.toLocaleDateString('ru-RU', { day: 'numeric' }),
-    month: monthNames[dt.getMonth()],
-    year: dt.toLocaleDateString('ru-RU', { year: 'numeric' })
+  const datePartsFmt = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: EVENT_TIME_ZONE
   });
+
+  const fmt = (dt) => {
+    const parts = datePartsFmt.formatToParts(dt);
+    return {
+      day: (parts.find((p) => p.type === 'day') || {}).value || '',
+      month: (parts.find((p) => p.type === 'month') || {}).value || '',
+      year: (parts.find((p) => p.type === 'year') || {}).value || ''
+    };
+  };
 
   if (start && end) {
     const s = fmt(start);
