@@ -187,7 +187,9 @@
       let eventVenue = '';
       let closingStarted = false;
       let submitIntentAt = 0;
-      const SUBMIT_INTENT_WINDOW_MS = 120000;
+      let closeResultObserver = null;
+      let closeResultWatchdog = null;
+      let closeObserverArmed = false;
       
       // Global logging function
       window.debugLog = (msg) => {
@@ -205,6 +207,7 @@
           window.debugLog('⚠️ Already closing');
           return;
         }
+        disarmCloseResultObserver();
         closingStarted = true;
         
         const closingNotice = document.getElementById('closing-notice');
@@ -389,66 +392,77 @@
       function markSubmitIntent(reason){
         submitIntentAt = Date.now();
         window.debugLog('🧭 Submit intent detected: ' + reason);
-      }
-
-      function hasRecentSubmitIntent(){
-        return submitIntentAt > 0 && (Date.now() - submitIntentAt) <= SUBMIT_INTENT_WINDOW_MS;
+        armCloseAfterFinalResult();
       }
 
       function isBitrixUrl(url){
         return typeof url === 'string' && url.includes('bitrix24.ru');
       }
 
-      function looksLikeRealFormPayload(body){
-        const isInterestingKey = (key) => {
-          const k = String(key || '').toLowerCase();
-          if (!k) return false;
-          if (k === 'evnumber' || k === 'event_name' || k === 'event_date' || k === 'event_city') {
-            return false;
-          }
-          return /(name|lastname|surname|phone|email|contact|consent|message|comment|company|form|crm)/i.test(k);
-        };
-
-        if (!body) return false;
-
-        if (body instanceof FormData) {
-          let hasInteresting = false;
-          let count = 0;
-          for (const [key] of body.entries()) {
-            count++;
-            if (isInterestingKey(key)) {
-              hasInteresting = true;
-              break;
-            }
-          }
-          return hasInteresting || count >= 5;
-        }
-
-        if (body instanceof URLSearchParams) {
-          let hasInteresting = false;
-          let count = 0;
-          for (const key of body.keys()) {
-            count++;
-            if (isInterestingKey(key)) {
-              hasInteresting = true;
-              break;
-            }
-          }
-          return hasInteresting || count >= 5;
-        }
-
-        if (typeof body === 'string') {
-          return /(name|lastname|phone|email|contact|consent|company|comment)/i.test(body);
-        }
-
-        return false;
+      function normalizeText(s){
+        return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
       }
 
-      function shouldCloseAfterRequest(url, method, body){
-        if (!isBitrixUrl(url)) return false;
-        if (String(method || 'GET').toUpperCase() !== 'POST') return false;
-        if (hasRecentSubmitIntent()) return true;
-        return looksLikeRealFormPayload(body);
+      function hasFinalFormMessage(){
+        if (!formContainerEl) return false;
+
+        const text = normalizeText(formContainerEl.textContent);
+        if (!text) return false;
+
+        const successText = /(спасибо|успешно|заявка отправлена|форма отправлена|мы получили|ваша заявка)/;
+        const errorText = /(ошибка|не удалось|повторите попытку|проверьте данные|не отправлена|не удалось отправить)/;
+        const hasResultText = successText.test(text) || errorText.test(text);
+
+        if (!hasResultText) return false;
+
+        const hasResultNode = formContainerEl.querySelector(
+          '[class*="success"], [class*="result"], [class*="complete"], [class*="error"], [data-b24-form-state], [data-b24-form-result]'
+        );
+
+        return Boolean(hasResultNode) || (Date.now() - submitIntentAt > 1200);
+      }
+
+      function disarmCloseResultObserver(){
+        if (closeResultObserver) {
+          closeResultObserver.disconnect();
+          closeResultObserver = null;
+        }
+        if (closeResultWatchdog) {
+          clearTimeout(closeResultWatchdog);
+          closeResultWatchdog = null;
+        }
+        closeObserverArmed = false;
+      }
+
+      function armCloseAfterFinalResult(){
+        if (closingStarted || closeObserverArmed || !formContainerEl) return;
+        closeObserverArmed = true;
+        window.debugLog('👀 Waiting for final form result before close');
+
+        const tryFinalize = () => {
+          if (closingStarted) {
+            disarmCloseResultObserver();
+            return;
+          }
+          if (hasFinalFormMessage()) {
+            window.debugLog('🏁 Final form result detected, starting close countdown');
+            disarmCloseResultObserver();
+            window.showClosingCountdown();
+          }
+        };
+
+        closeResultObserver = new MutationObserver(() => {
+          tryFinalize();
+        });
+
+        closeResultObserver.observe(formContainerEl, { childList: true, subtree: true, characterData: true });
+        closeResultWatchdog = setTimeout(() => {
+          window.debugLog('⌛ Final result not detected yet, close remains disabled');
+          disarmCloseResultObserver();
+        }, 180000);
+
+        // Check immediately in case result is rendered very fast.
+        tryFinalize();
       }
 
       // Track if this is final form submission
@@ -461,7 +475,6 @@
         const options = args[1] || {};
         const method = String(options.method || 'GET').toUpperCase();
         const requestUrl = typeof url === 'string' ? url : (url && url.url ? url.url : '');
-        const shouldCloseForThisRequest = shouldCloseAfterRequest(requestUrl, method, options.body);
         
         // Log all POST requests for debugging
         if (typeof requestUrl === 'string' && method === 'POST') {
@@ -499,12 +512,7 @@
           fetchPromise
             .then(response => {
               window.debugLog(`✅ Bitrix response: ${response.status}`);
-              if (response.status >= 200 && response.status < 400 && shouldCloseForThisRequest) {
-                window.debugLog('💚 Triggering close sequence');
-                window.showClosingCountdown();
-              } else {
-                window.debugLog('ℹ️ Close sequence skipped (not a final form submit)');
-              }
+              window.debugLog('ℹ️ Close sequence is gated by final form result message');
               return response;
             })
             .catch(err => {
@@ -528,7 +536,6 @@
 
       const originalSend = XMLHttpRequest.prototype.send;
       XMLHttpRequest.prototype.send = function(body) {
-        const shouldCloseForThisRequest = shouldCloseAfterRequest(this._url, this._method, body);
         if (isBitrixUrl(this._url) && this._method === 'POST' && body) {
           window.debugLog('🎯 Bitrix XHR detected');
           try {
@@ -548,12 +555,7 @@
           this.onreadystatechange = function() {
             if (this.readyState === 4) {
               window.debugLog(`✅ XHR completed: ${this.status}`);
-              if (this.status >= 200 && this.status < 400 && shouldCloseForThisRequest) {
-                window.debugLog('💚 Triggering close sequence from XHR');
-                window.showClosingCountdown();
-              } else {
-                window.debugLog('ℹ️ Close sequence skipped for XHR (not a final form submit)');
-              }
+              window.debugLog('ℹ️ Close sequence is gated by final form result message');
             }
             if (originalOnReadyStateChange) {
               originalOnReadyStateChange.apply(this, arguments);
