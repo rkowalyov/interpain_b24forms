@@ -33,6 +33,7 @@
   <div class="card">
     <h1 id="title">Регистрация на мероприятие</h1>
     <div id="info" class="meta"></div>
+    <div id="venue-info" class="meta" style="display:none"></div>
     <div id="error" class="error" style="display:none"></div>
     <div id="event-status" class="status-panel" aria-live="polite">
       <div id="event-status-icon" class="status-panel__icon">!</div>
@@ -58,6 +59,7 @@
       const idAsNumber = id;
       const titleEl = document.getElementById('title');
       const infoEl = document.getElementById('info');
+      const venueInfoEl = document.getElementById('venue-info');
       const errorEl = document.getElementById('error');
       const formContainerEl = document.getElementById('b24form_container');
       const hintEl = document.querySelector('.hint');
@@ -68,6 +70,7 @@
       let eventName = '';
       let eventDate = '';
       let eventCity = '';
+      let eventVenue = '';
       let closingStarted = false;
       
       // Global logging function
@@ -129,6 +132,8 @@
       function showFormBlockedMessage(kind, title, text) {
         titleEl.textContent = 'Регистрация на мероприятие';
         infoEl.textContent = '';
+        venueInfoEl.style.display = 'none';
+        venueInfoEl.textContent = '';
         errorEl.style.display = 'none';
         statusPanelEl.className = `status-panel status-panel--${kind}`;
         statusTitleEl.textContent = title;
@@ -169,11 +174,19 @@
           eventName = data.name || data.title || '';
           eventDate = data.date || data.event_date || '';
           eventCity = data.city || data.location || '';
+          eventVenue = data.venue || '';
           if (eventName) titleEl.textContent = `Регистрация: ${eventName}`;
           const parts = [];
           if (eventDate) parts.push(`Дата: ${formatDate(eventDate)}`);
           if (eventCity) parts.push(`Город: ${escapeHtml(eventCity)}`);
           infoEl.textContent = parts.join(' • ');
+          if (eventVenue) {
+            venueInfoEl.innerHTML = `Место: ${escapeHtml(eventVenue)}`;
+            venueInfoEl.style.display = 'block';
+          } else {
+            venueInfoEl.style.display = 'none';
+            venueInfoEl.textContent = '';
+          }
           shouldLoadForm = true;
           window.debugLog('✅ Event data loaded');
         })

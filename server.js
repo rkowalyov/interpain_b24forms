@@ -86,20 +86,86 @@ async function b24Call(base, method, params = {}) {
   return data.result;
 }
 
+function parseDateSafe(value) {
+  if (!value) return null;
+  const dt = new Date(value);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+}
+
+function formatEventDateRange(startValue, endValue) {
+  const start = parseDateSafe(startValue);
+  const end = parseDateSafe(endValue);
+
+  if (!start && !end) return '';
+
+  const monthNames = [
+    'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+    'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+  ];
+  const fmt = (dt) => ({
+    day: dt.toLocaleDateString('ru-RU', { day: 'numeric' }),
+    month: monthNames[dt.getMonth()],
+    year: dt.toLocaleDateString('ru-RU', { year: 'numeric' })
+  });
+
+  if (start && end) {
+    const s = fmt(start);
+    const e = fmt(end);
+    if (s.year === e.year) {
+      return `${s.day} ${s.month} - ${e.day} ${e.month} ${s.year} года`;
+    }
+    return `${s.day} ${s.month} ${s.year} года - ${e.day} ${e.month} ${e.year} года`;
+  }
+
+  const single = fmt(start || end);
+  return `${single.day} ${single.month} ${single.year} года`;
+}
+
+function extractCityFromVenue(venue) {
+  if (!venue) return '';
+
+  let candidate = String(venue).split(',')[0].trim();
+  candidate = candidate.replace(/^г\.\s*/i, '').replace(/^город\s+/i, '').trim();
+
+  if (candidate.includes('.')) {
+    const dot = candidate.indexOf('.');
+    const beforeDot = candidate.slice(0, dot).trim();
+    const afterDot = candidate.slice(dot + 1).trim();
+    if (/^г$/i.test(beforeDot) && afterDot) {
+      candidate = afterDot;
+    } else if (beforeDot) {
+      candidate = beforeDot;
+    }
+  }
+
+  candidate = candidate
+    .replace(/\b(ул|улица|проспект|пр-т|переулок|пер|наб|набережная)\b.*$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return candidate;
+}
+
 function normalizeEventPayload(item, id) {
   const rawStateId = item && item[EVENT_STATE_FIELD];
   const stateId = Number(rawStateId);
   const stateCode = String((item && item[EVENT_STATE_CODE_FIELD]) || '').toUpperCase();
   const registrationOpen = stateId === EVENT_OPEN_STATE_ID || stateCode === 'OPEN';
+  const venue = (item && item.ufCrm21EventAddr) || '';
+  const dateRange = formatEventDateRange(
+    item && item.ufCrm21EventDate,
+    item && item.ufCrm21EventEndDate
+  );
 
   return {
     id: Number(item && item.id || id),
     found: true,
     registrationOpen,
     message: registrationOpen ? null : 'Регистрация сейчас закрыта',
-    name: (item && item.title) || `Мероприятие №${id}`,
-    date: (item && item.ufCrm21EventDate) || '',
-    city: (item && item.ufCrm21EventAddr) || '',
+    name: (item && item.ufCrm21DpoName) || (item && item.title) || `Мероприятие №${id}`,
+    date: dateRange,
+    city: extractCityFromVenue(venue),
+    venue,
     stateId: Number.isFinite(stateId) ? stateId : null,
     stateCode: stateCode || null
   };
