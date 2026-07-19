@@ -706,6 +706,7 @@
             initWatchTimer = null;
           }
           hideLoadingState();
+          if (hintEl) hintEl.style.display = 'none';
           try{
             const form = ev?.detail?.object;
             if (form && typeof form.setProperty === 'function') {
