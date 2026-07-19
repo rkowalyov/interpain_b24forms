@@ -8,9 +8,11 @@
   <style>
     :root{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial;color:#111}
     body{margin:0;background:#f7f7f8;padding:24px;display:flex;align-items:flex-start;justify-content:center}
-    .card{max-width:720px;width:100%;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(16,24,40,.08);padding:24px;text-align:center}
+    .card{max-width:720px;width:100%;background:#fff;border-radius:8px;box-shadow:0 6px 18px rgba(16,24,40,.08);padding:24px}
     h1{font-size:20px;margin:0 0 12px}
-    .meta{color:#444;margin:6px 0;text-align:center}
+    #title{font-size:44px;line-height:1.14;font-weight:700;letter-spacing:-0.02em;margin:0 auto 14px;max-width:980px;text-wrap:balance}
+    .event-header{text-align:center}
+    .event-meta{color:#444;margin:6px 0;text-align:center;font-size:18px;line-height:1.35}
     .error{color:#b00020;background:#fff0f1;padding:12px;border-radius:6px}
     .hint{color:#666;font-size:14px;margin-top:8px}
     #b24form_container{margin-top:18px}
@@ -27,18 +29,28 @@
     .status-panel--error{background:#f4f8ff;border-color:#dbe8ff}
     .status-panel--error .status-panel__icon{background:#e5efff;color:#1e3a8a}
     .status-panel--error .status-panel__title{color:#1e3a8a}
+    @media (max-width: 768px){
+      body{padding:12px}
+      .card{padding:16px}
+      #title{font-size:30px;line-height:1.18;max-width:100%}
+      .event-meta{font-size:16px;line-height:1.32}
+      .hint{font-size:13px}
+      #b24form_container{margin-top:14px}
+    }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1 id="title">Мероприятие</h1>
-    <div id="info" class="meta"></div>
-    <div id="venue-info" class="meta" style="display:none"></div>
-    <div id="error" class="error" style="display:none"></div>
-    <div id="event-status" class="status-panel" aria-live="polite">
-      <div id="event-status-icon" class="status-panel__icon">!</div>
-      <h2 id="event-status-title" class="status-panel__title"></h2>
-      <p id="event-status-text" class="status-panel__text"></p>
+    <div class="event-header">
+      <h1 id="title">Мероприятие</h1>
+      <div id="info" class="event-meta"></div>
+      <div id="venue-info" class="event-meta" style="display:none"></div>
+      <div id="error" class="error" style="display:none"></div>
+      <div id="event-status" class="status-panel" aria-live="polite">
+        <div id="event-status-icon" class="status-panel__icon">!</div>
+        <h2 id="event-status-title" class="status-panel__title"></h2>
+        <p id="event-status-text" class="status-panel__text"></p>
+      </div>
     </div>
     <div id="closing-notice" style="display:none;background:#e8f5e9;padding:12px;border-radius:6px;margin-top:12px;text-align:center;font-weight:bold;color:#2e7d32;font-size:16px"></div>
     <div id="debug-log" style="display:none;background:#f5f5f5;padding:12px;border-radius:6px;margin-top:12px;font-size:12px;max-height:200px;overflow-y:auto;border:1px solid #ddd;font-family:monospace"></div>
