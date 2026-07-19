@@ -81,6 +81,14 @@
       const params = new URLSearchParams(location.search);
       const idStr = params.get('EVNUMBER');
       const id = idStr ? parseInt(idStr, 10) : null;
+      const DEFAULT_FORM_ID = 739;
+      const DEFAULT_FORM_CODE = '0zko7k';
+      const formIdStr = params.get('CRMFNUMBER');
+      const parsedFormId = formIdStr ? parseInt(formIdStr, 10) : NaN;
+      const selectedFormId = Number.isInteger(parsedFormId) && parsedFormId > 0
+        ? parsedFormId
+        : DEFAULT_FORM_ID;
+      const selectedFormCode = window.B24_FORM_CODE || DEFAULT_FORM_CODE;
       const idAsNumber = id;
       const titleEl = document.getElementById('title');
       const infoEl = document.getElementById('info');
@@ -144,6 +152,10 @@
       };
       
       window.debugLog('🌍 Page initialized, EVNUMBER=' + idStr);
+      if (formIdStr && selectedFormId === DEFAULT_FORM_ID) {
+        window.debugLog('⚠️ Invalid CRMFNUMBER, fallback to default form 739: ' + formIdStr);
+      }
+      window.debugLog('🧩 Selected CRM form id: ' + selectedFormId);
 
       if (!id || isNaN(id)) {
         errorEl.textContent = 'Ошибка: параметр EVNUMBER не указан в URL или не является числом.';
@@ -459,6 +471,7 @@
         window.debugLog('🚀 loadB24 started');
         const loaderBase = window.B24_LOADER_URL || '/api/loader';
         const container = document.getElementById('b24form_container');
+        let fallbackLoaderRequested = false;
 
         try {
           container.textContent = '';
@@ -468,7 +481,7 @@
 
         const script = document.createElement('script');
         script.async = true;
-        script.setAttribute('data-b24-form', 'inline/739/0zko7k');
+        script.setAttribute('data-b24-form', `inline/${selectedFormId}/${selectedFormCode}`);
         script.setAttribute('data-skip-moving', 'true');
         script.setAttribute('data-EVNUMBER', id);
         
@@ -479,8 +492,19 @@
           EVENT_CITY: eventCity || ''
         };
         
-        const loaderUrl = loaderBase + '?ts=' + Date.now();
+        const loaderUrl = loaderBase + '?ts=' + Date.now() + '&formId=' + encodeURIComponent(selectedFormId);
         script.src = loaderUrl;
+        script.onerror = function() {
+          if (fallbackLoaderRequested || selectedFormId === DEFAULT_FORM_ID) {
+            window.debugLog('❌ Bitrix loader failed to load');
+            return;
+          }
+
+          fallbackLoaderRequested = true;
+          window.debugLog('⚠️ Loader for CRMFNUMBER=' + selectedFormId + ' failed, fallback to 739');
+          script.setAttribute('data-b24-form', `inline/${DEFAULT_FORM_ID}/${selectedFormCode}`);
+          script.src = loaderBase + '?ts=' + Date.now() + '&formId=' + DEFAULT_FORM_ID;
+        };
         container.appendChild(script);
         window.debugLog('📥 Bitrix loader appended');
 
