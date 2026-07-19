@@ -15,6 +15,22 @@
     .event-meta{color:#444;margin:6px 0;text-align:center;font-size:18px;line-height:1.35}
     .error{color:#b00020;background:#fff0f1;padding:12px;border-radius:6px}
     .hint{color:#666;font-size:14px;margin-top:8px}
+    .loading-state{display:block;margin:8px 0 6px}
+    .skeleton{position:relative;overflow:hidden;background:#e9edf3;border-radius:10px}
+    .skeleton::after{content:'';position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);animation:skeleton-shimmer 1.35s infinite}
+    .skeleton-line{height:14px;margin:10px auto}
+    .skeleton-title{height:38px;max-width:560px;margin:8px auto 16px;border-radius:12px}
+    .skeleton-meta{height:18px;max-width:420px}
+    .skeleton-meta + .skeleton-meta{max-width:320px;margin-top:12px}
+    .skeleton-form{height:240px;margin-top:22px;border-radius:18px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:14px}
+    .throbber{width:44px;height:44px;border-radius:50%;border:4px solid rgba(30,58,138,.14);border-top-color:#1e3a8a;animation:throbber-spin .9s linear infinite}
+    .loading-label{font-size:14px;color:#4b5563;font-weight:600;letter-spacing:.01em}
+    .progress-bar{width:min(320px,72vw);height:8px;border-radius:999px;background:#e6ebf3;overflow:hidden}
+    .progress-bar__fill{width:38%;height:100%;border-radius:inherit;background:linear-gradient(90deg,#1e3a8a,#00a3ff);animation:progress-pulse 1.2s ease-in-out infinite}
+    .loading-state.is-hidden{display:none}
+    @keyframes skeleton-shimmer{100%{transform:translateX(100%)}}
+    @keyframes throbber-spin{to{transform:rotate(360deg)}}
+    @keyframes progress-pulse{0%{transform:translateX(-30%)}50%{transform:translateX(120%)}100%{transform:translateX(-30%)}}
     #b24form_container{margin-top:18px}
     .status-panel{display:none;margin-top:14px;border:1px solid #eceff3;border-radius:10px;padding:18px;background:#fafcff}
     .status-panel__icon{width:38px;height:38px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:10px}
@@ -42,6 +58,8 @@
       .event-meta{font-size:16px;line-height:1.32}
       .hint{font-size:13px}
       #b24form_container{margin-top:14px}
+      .skeleton-form{height:200px}
+      .loading-label{font-size:13px}
       .post-submit-actions{left:12px;right:12px;transform:none;bottom:12px}
       .post-submit-btn{width:100%}
       .post-submit-note{font-size:11px}
@@ -51,6 +69,11 @@
 <body>
   <div class="card">
     <div class="event-header">
+      <div id="loading-state" class="loading-state" aria-hidden="true">
+        <div class="skeleton skeleton-title"></div>
+        <div class="skeleton skeleton-line skeleton-meta"></div>
+        <div class="skeleton skeleton-line skeleton-meta"></div>
+      </div>
       <h1 id="title">Мероприятие</h1>
       <div id="info" class="event-meta"></div>
       <div id="venue-info" class="event-meta" style="display:none"></div>
@@ -72,6 +95,11 @@
     <input type="hidden" id="hidden_event_name" name="EVENT_NAME" value="">
     <input type="hidden" id="hidden_event_date" name="EVENT_DATE" value="">
     <input type="hidden" id="hidden_event_city" name="EVENT_CITY" value="">
+    <div id="loading-form" class="skeleton skeleton-form" aria-hidden="true">
+      <div class="throbber"></div>
+      <div class="loading-label">Загружаем регистрационную форму</div>
+      <div class="progress-bar"><div class="progress-bar__fill"></div></div>
+    </div>
     <div id="b24form_container"></div>
     <div class="hint">Если форма не загружается — свяжитесь с организатором.</div>
   </div>
@@ -101,6 +129,8 @@
       const statusIconEl = document.getElementById('event-status-icon');
       const statusTitleEl = document.getElementById('event-status-title');
       const statusTextEl = document.getElementById('event-status-text');
+      const loadingStateEl = document.getElementById('loading-state');
+      const loadingFormEl = document.getElementById('loading-form');
       const postSubmitActionsEl = document.getElementById('post-submit-actions');
       const closeWindowBtn = document.getElementById('btn-close-window');
       let eventName = '';
@@ -175,12 +205,25 @@
       const apiUrl = `${API_BASE}/${encodeURIComponent(id)}`;
       let shouldLoadForm = false;
 
+      function hideLoadingState() {
+        if (loadingStateEl) loadingStateEl.style.display = 'none';
+        if (loadingFormEl) loadingFormEl.style.display = 'none';
+      }
+
+      function showLoadingState() {
+        if (loadingStateEl) loadingStateEl.style.display = 'block';
+        if (loadingFormEl) loadingFormEl.style.display = 'flex';
+      }
+
+      showLoadingState();
+
       function showFormBlockedMessage(kind, title, text) {
         titleEl.textContent = 'Регистрация на мероприятие';
         infoEl.textContent = '';
         venueInfoEl.style.display = 'none';
         venueInfoEl.textContent = '';
         errorEl.style.display = 'none';
+        hideLoadingState();
         statusPanelEl.className = `status-panel status-panel--${kind}`;
         statusTitleEl.textContent = title;
         statusTextEl.textContent = text;
@@ -266,6 +309,7 @@
             venueInfoEl.textContent = '';
           }
           shouldLoadForm = true;
+          hideLoadingState();
           window.debugLog('✅ Event data loaded');
         })
         .catch(err => {
@@ -274,6 +318,7 @@
         })
         .finally(() => {
           if (!shouldLoadForm) {
+            hideLoadingState();
             return;
           }
           window.debugLog('Loading Bitrix form...');
@@ -613,6 +658,7 @@
             clearTimeout(initWatchTimer);
             initWatchTimer = null;
           }
+          hideLoadingState();
           try{
             const form = ev?.detail?.object;
             if (form && typeof form.setProperty === 'function') {
