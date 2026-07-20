@@ -3,6 +3,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cors = require('cors');
 const path = require('path');
+const { createCalendarWebhookHandler } = require('./lib/bitrix-calendar-webhook');
 require('dotenv').config();
 
 const app = express();
@@ -247,6 +248,8 @@ app.post('/api/lead', async (req, res) => {
     return res.status(502).json({ error: e.message });
   }
 });
+
+app.post('/api/calendar-webhook', createCalendarWebhookHandler());
 
 app.use((err, req, res, next) => {
   console.error(err && err.message);
