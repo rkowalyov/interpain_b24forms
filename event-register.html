@@ -103,7 +103,7 @@
         <div class="skeleton skeleton-line skeleton-meta"></div>
         <div class="skeleton skeleton-line skeleton-meta"></div>
       </div>
-      <h1 id="title">Мероприятие</h1>
+      <h1 id="title">Подготовка анкеты</h1>
       <div id="info" class="event-meta"></div>
       <div id="venue-info" class="event-meta" style="display:none"></div>
       <div id="error" class="error" style="display:none"></div>
@@ -252,7 +252,7 @@
         return;
       }
 
-      titleEl.textContent = `Мероприятие №${id}`;
+      titleEl.textContent = `Подготовка анкеты ${id}`;
 
       const API_BASE = window.EVENT_API_BASE || '/api/event';
       const apiUrl = `${API_BASE}/${encodeURIComponent(id)}`;
