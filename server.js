@@ -15,8 +15,8 @@ const PORT = process.env.PORT || 3000;
 const allowedEnv = process.env.ALLOWED_ORIGINS || '';
 const allowed = allowedEnv.split(',').map(s => s.trim()).filter(Boolean);
 console.log('[PROXY] Allowed origins:', allowed.length ? allowed : ['*']);
-if (!process.env.BITRIX_WEBHOOK) {
-  console.warn('[PROXY] WARNING: BITRIX_WEBHOOK is not set. /api/lead will fail.');
+if (!process.env.BITRIX_WEBHOOK && !process.env.B24_WEBHOOK_URL) {
+  console.warn('[PROXY] WARNING: BITRIX_WEBHOOK/B24_WEBHOOK_URL is not set. /api/lead will fail.');
 }
 if (!process.env.B24_WEBHOOK_URL && !process.env.BITRIX_WEBHOOK) {
   console.warn('[PROXY] WARNING: B24_WEBHOOK_URL is not set. /api/event/:id lookup may fail.');
@@ -58,6 +58,23 @@ function getWebhookBase() {
 
 function methodUrl(base, method) {
   return `${base}/${method}.json`;
+}
+
+function getLeadWebhookUrl() {
+  const raw = ((process.env.BITRIX_WEBHOOK || process.env.B24_WEBHOOK_URL) || '').trim();
+  if (!raw) return '';
+
+  const cleaned = raw.replace(/\/+$/, '');
+
+  if (/\/crm\.lead\.add(?:\.json)?$/i.test(cleaned)) {
+    return cleaned.replace(/(?:\.json)?$/i, '.json');
+  }
+
+  if (/\/[A-Za-z0-9_.-]+\.json$/i.test(cleaned)) {
+    return cleaned.replace(/\/[A-Za-z0-9_.-]+\.json$/i, '/crm.lead.add.json');
+  }
+
+  return `${cleaned}/crm.lead.add.json`;
 }
 
 async function b24Call(base, method, params = {}) {
@@ -227,13 +244,11 @@ app.get(['/event-register', '/event-register/'], (req, res) => {
 });
 
 app.post('/api/lead', async (req, res) => {
-  const webhook = process.env.BITRIX_WEBHOOK;
-  if (!webhook) return res.status(500).json({ error: 'webhook missing' });
+  const url = getLeadWebhookUrl();
+  if (!url) return res.status(500).json({ error: 'webhook missing' });
 
   const fields = req.body && req.body.fields;
   if (!fields) return res.status(400).json({ error: 'missing fields' });
-
-  const url = webhook.replace(/\/+$/, '').replace(/\.json$/, '') + '.json';
 
   try {
     const resp = await fetch(url, {

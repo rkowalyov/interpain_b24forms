@@ -24,6 +24,14 @@ The repository also includes a webhook handler for creating and updating Bitrix2
 
 - `POST /api/calendar-webhook`
 
+Default target calendar:
+
+- section name: `Планирование УЦ АИЛБ`
+- calendar type: `user`
+- ownerId: `1`
+
+The handler auto-resolves section id by section name if `section` is not provided.
+
 Request body shape:
 
     {
@@ -43,6 +51,13 @@ Request body shape:
     }
 
 For updates, send `action: "update"` and include the Bitrix calendar event id as `event.id` (or `event.calendarEventId`). If `action` is omitted, the handler uses `update` when an event id is present, otherwise `create`.
+
+Override options:
+
+- per request: `event.section`, or `event.sectionName` / `event.calendarName`
+- env vars: `B24_CALENDAR_SECTION_NAME`, `B24_CALENDAR_TYPE`, `B24_CALENDAR_OWNER_ID`
+
+Important: auto-resolution by section name uses `calendar.section.get` and requires webhook permissions for calendar scope. If your webhook has limited scope, pass `event.section` explicitly.
 
 ## Troubleshooting: EVNUMBER parameter arrives as 0
 
@@ -78,4 +93,3 @@ If you prefer not to use a Business Process:
 ### Additional debugging
 
 See [EVNUMBER_TRANSMISSION_STATUS.md](EVNUMBER_TRANSMISSION_STATUS.md) for detailed transmission flow and debugging steps.
-

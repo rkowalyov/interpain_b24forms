@@ -28,6 +28,10 @@
       "dest": "/api/lead.js"
     },
     {
+      "src": "^/api/calendar-webhook/?$",
+      "dest": "/api/calendar-webhook.js"
+    },
+    {
       "src": "^/api/event/(.*)$",
       "dest": "/api/event.js?id=$1"
     },
