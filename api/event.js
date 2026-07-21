@@ -4,16 +4,21 @@ const EVENT_STATE_CODE_FIELD = process.env.EVENT_STATE_CODE_FIELD || 'ufCrm21_17
 const EVENT_OPEN_STATE_ID = Number(process.env.EVENT_OPEN_STATE_ID || 1111);
 const EVENT_TIME_ZONE = process.env.EVENT_TIME_ZONE || 'Europe/Moscow';
 
+function normalizeWebhookBase(raw) {
+  const cleaned = String(raw || '').trim().replace(/\/+$/, '');
+  if (!cleaned) return '';
+  // Accept both base webhook URL and method URL formats.
+  return cleaned.replace(/\/[^/]*\.[^/]*(?:\.json)?$/i, '');
+}
+
 function getWebhookBase() {
   const b24 = process.env.B24_WEBHOOK_URL && process.env.B24_WEBHOOK_URL.trim();
-  if (b24) return b24.replace(/\/+$/, '');
+  if (b24) return normalizeWebhookBase(b24);
 
   const leadWebhook = process.env.BITRIX_WEBHOOK && process.env.BITRIX_WEBHOOK.trim();
   if (!leadWebhook) return '';
 
-  return leadWebhook
-    .replace(/\/+$/, '')
-    .replace(/\/[A-Za-z0-9_.-]+(?:\.json)?$/, '');
+  return normalizeWebhookBase(leadWebhook);
 }
 
 function methodUrl(base, method) {
