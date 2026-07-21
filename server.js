@@ -45,10 +45,26 @@ const EVENT_OPEN_STATE_ID = Number(process.env.EVENT_OPEN_STATE_ID || 1111);
 const EVENT_TIME_ZONE = process.env.EVENT_TIME_ZONE || 'Europe/Moscow';
 
 function normalizeWebhookBase(raw) {
-  const cleaned = String(raw || '').trim().replace(/\/+$/, '');
+  const cleaned = String(raw || '').trim();
   if (!cleaned) return '';
-  // Accept both base webhook URL and method URL formats.
-  return cleaned.replace(/\/[^/]*\.[^/]*(?:\.json)?$/i, '');
+
+  try {
+    const parsed = new URL(cleaned);
+    const parts = parsed.pathname.split('/').filter(Boolean);
+    const restIndex = parts.lastIndexOf('rest');
+
+    if (restIndex >= 0 && parts.length >= restIndex + 3) {
+      // Keep exactly /rest/{userId}/{token}; drop trailing method segment if present.
+      parsed.pathname = `/${parts.slice(0, restIndex + 3).join('/')}`;
+      parsed.search = '';
+      parsed.hash = '';
+      return parsed.toString().replace(/\/+$/, '');
+    }
+
+    return `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '');
+  } catch {
+    return cleaned.replace(/\/+$/, '');
+  }
 }
 
 function getWebhookBase() {
