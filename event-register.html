@@ -159,6 +159,7 @@
       const params = new URLSearchParams(location.search);
       const idStr = params.get('EVNUMBER');
       const id = idStr ? parseInt(idStr, 10) : null;
+      const shouldShowDebugPanel = params.get('debug') === '1' || params.get('diagnostic') === '1';
       const FALLBACK_FORM_ID = 739;
       const DEFAULT_FORM_CODE = '0zko7k';
       const formIdStr = params.get('CRMFNUMBER');
@@ -194,15 +195,25 @@
       let closeObserverArmed = false;
       
       // Global logging function
+      window.__debugLogs = [];
       window.debugLog = (msg) => {
         console.log(msg);
         const log = document.getElementById('debug-log');
+        const time = new Date().toLocaleTimeString();
+        const entry = `[${time}] ${msg}`;
+        window.__debugLogs.push(entry);
         if (log) {
-          const time = new Date().toLocaleTimeString();
-          log.innerHTML += `[${time}] ${msg}<br>`;
+          log.innerHTML += `${entry}<br>`;
           log.scrollTop = log.scrollHeight;
         }
       };
+      if (shouldShowDebugPanel) {
+        const log = document.getElementById('debug-log');
+        if (log) {
+          log.style.display = 'block';
+          log.innerHTML = '<strong>Debug mode enabled</strong><br>';
+        }
+      }
       
       window.showClosingCountdown = () => {
         if (closingStarted) {
@@ -235,7 +246,10 @@
         updateNotice();
       };
       
-      window.debugLog('🌍 Page initialized, EVNUMBER=' + idStr);
+      window.debugLog('🌍 Page initialized, EVNUMBER=' + idStr + ', debug=' + shouldShowDebugPanel);
+      if (shouldShowDebugPanel) {
+        window.debugLog('🧪 Debug panel enabled via URL parameter');
+      }
       if (formIdStr && !requestedFormId) {
         window.debugLog('⚠️ Invalid CRMFNUMBER, fallback to default form: ' + formIdStr);
       }
