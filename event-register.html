@@ -646,7 +646,19 @@
         let fallbackUsed = false;
         let initWatchTimer = null;
         let formInitialized = false;
+        let finalFailureShown = false;
         const resolvedConfig = await resolveFormConfig(loaderBase);
+
+        function showLoaderFailure(reason) {
+          if (finalFailureShown) return;
+          finalFailureShown = true;
+          window.debugLog('❌ Form load failure: ' + reason);
+          showFormBlockedMessage(
+            'error',
+            'Форма временно недоступна',
+            'Не удалось загрузить регистрационную форму. Возможно, временные проблемы с доступом к Bitrix или сетью. Попробуйте обновить страницу через несколько минут или обратитесь к организатору.'
+          );
+        }
 
         try {
           container.textContent = '';
@@ -673,6 +685,7 @@
           script.onerror = function() {
             if (fallbackUsed || formId === runtimeDefaultFormId) {
               window.debugLog('❌ Bitrix loader failed to load');
+              showLoaderFailure('Bitrix loader script failed to load for form ' + formId + ' and fallback is exhausted');
               return;
             }
 
@@ -692,6 +705,7 @@
             if (formInitialized) return;
             if (fallbackUsed || formId === runtimeDefaultFormId) {
               window.debugLog('❌ Form did not initialize');
+              showLoaderFailure('Bitrix form never fired b24:form:init after loader timeout');
               return;
             }
 
