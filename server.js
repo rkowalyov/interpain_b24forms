@@ -7,7 +7,44 @@ const { createCalendarWebhookHandler } = require('./lib/bitrix-calendar-webhook'
 require('dotenv').config();
 
 const app = express();
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "'unsafe-inline'",
+        "https://*.bitrix24.ru",
+        "https://*.bitrix24.com",
+        "https://cdn-ru.bitrix24.ru",
+        "https://cdn.bitrix24.ru",
+        "https://cdn.bitrix24.com",
+        "https://*.crmform.bitrix24.ru",
+        "https://*.crmform.bitrix24.com"
+      ],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:", "data:"],
+      imgSrc: ["'self'", "data:", "https://*.bitrix24.ru", "https://*.bitrix24.com"],
+      connectSrc: [
+        "'self'",
+        "https://*.bitrix24.ru",
+        "https://*.bitrix24.com",
+        "https://cdn-ru.bitrix24.ru",
+        "https://cdn.bitrix24.ru",
+        "https://cdn.bitrix24.com",
+        "https://*.crmform.bitrix24.ru",
+        "https://*.crmform.bitrix24.com",
+        "wss:",
+        "ws:"
+      ],
+      fontSrc: ["'self'", "data:", "https:"] ,
+      frameSrc: ["'self'", "https://*.bitrix24.ru", "https://*.bitrix24.com"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'", "https://*.bitrix24.ru", "https://*.bitrix24.com"],
+      upgradeInsecureRequests: []
+    }
+  }
+}));
 app.use(express.json({ limit: '64kb' }));
 
 const PORT = process.env.PORT || 3000;
