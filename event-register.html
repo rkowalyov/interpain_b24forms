@@ -608,10 +608,20 @@
         return originalSend.apply(this, [body]);
       };
 
+      async function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+          return await fetch(url, { ...options, signal: controller.signal });
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+
       async function resolveFormConfig(loaderBase) {
         try {
           const defaultMetaUrl = loaderBase + '?meta=1&ts=' + Date.now();
-          const defaultResp = await fetch(defaultMetaUrl, { credentials: 'same-origin' });
+          const defaultResp = await fetchWithTimeout(defaultMetaUrl, { credentials: 'same-origin' }, 6000);
           if (defaultResp.ok) {
             const defaultMeta = await defaultResp.json();
             const defaultId = Number(defaultMeta && (defaultMeta.defaultFormId || defaultMeta.resolvedFormId));
@@ -637,7 +647,7 @@
 
         try {
           const metaUrl = loaderBase + '?meta=1&ts=' + Date.now() + '&formId=' + encodeURIComponent(targetFormId);
-          const resp = await fetch(metaUrl, { credentials: 'same-origin' });
+          const resp = await fetchWithTimeout(metaUrl, { credentials: 'same-origin' }, 6000);
           if (!resp.ok) throw new Error('meta response ' + resp.status);
           const meta = await resp.json();
           const resolvedId = Number(meta && meta.resolvedFormId);
@@ -661,7 +671,22 @@
         let initWatchTimer = null;
         let formInitialized = false;
         let finalFailureShown = false;
-        const resolvedConfig = await resolveFormConfig(loaderBase);
+        let resolvedConfig;
+
+        try {
+          resolvedConfig = await Promise.race([
+            resolveFormConfig(loaderBase),
+            new Promise((_, reject) => {
+              setTimeout(() => reject(new Error('Loader config timeout')), 7000);
+            })
+          ]);
+        } catch (e) {
+          window.debugLog('⚠️ Form config lookup timed out or failed: ' + (e && e.message ? e.message : e));
+          resolvedConfig = {
+            formId: requestedFormId || runtimeDefaultFormId,
+            formCode: hasExplicitFormCode ? formCodeStr : runtimeDefaultFormCode
+          };
+        }
 
         function showLoaderFailure(reason) {
           if (finalFailureShown) return;
