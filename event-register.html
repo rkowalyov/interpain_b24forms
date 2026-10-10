@@ -159,6 +159,7 @@
       const params = new URLSearchParams(location.search);
       const idStr = params.get('EVNUMBER');
       const id = idStr ? parseInt(idStr, 10) : null;
+      const useDirectBitrixLoader = params.get('mode') !== 'old';
       const shouldShowDebugPanel = params.get('debug') === '1' || params.get('diagnostic') === '1';
       const FALLBACK_FORM_ID = 739;
       const DEFAULT_FORM_CODE = '0zko7k';
@@ -719,7 +720,13 @@
           script.setAttribute('data-b24-form', `inline/${formId}/${formCode}`);
           script.setAttribute('data-skip-moving', 'true');
           script.setAttribute('data-EVNUMBER', id);
-          script.src = loaderBase + '?ts=' + Date.now() + '&formId=' + encodeURIComponent(formId);
+          if (useDirectBitrixLoader) {
+            const cacheKey = Math.floor(Date.now() / 180000);
+            script.src = `https://cdn-ru.bitrix24.ru/b16533649/crm/form/loader_${formId}.js?${cacheKey}`;
+            window.debugLog('🌐 Direct Bitrix loader selected for form ' + formId);
+          } else {
+            script.src = loaderBase + '?ts=' + Date.now() + '&formId=' + encodeURIComponent(formId);
+          }
 
           script.onerror = function() {
             if (fallbackUsed || formId === runtimeDefaultFormId) {
