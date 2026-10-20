@@ -160,7 +160,7 @@
   <script>
     (function(){
       const params = new URLSearchParams(location.search);
-      const idStr = params.get('EVNUMBER');
+      const idStr = params.get('EVNUMBER') || params.get('EVPASSPORT_ID');
       const id = idStr ? parseInt(idStr, 10) : null;
       const useDirectBitrixLoader = params.get('mode') !== 'old';
       const shouldShowDebugPanel = params.get('debug') === '1' || params.get('diagnostic') === '1';
@@ -393,7 +393,7 @@
               window.debugLog('⛔ Event not found for EVNUMBER=' + id);
               return;
             }
-            throw new Error('API response ' + status);
+            throw new Error('API response ' + status + (data.code ? ': ' + data.code : ''));
           }
 
           if (data && data.found === false) {
@@ -433,13 +433,18 @@
         })
         .catch(err => {
           window.debugLog('⚠️ Event API error: ' + err.message);
-          const timedOut = err && err.name === 'AbortError';
-          showFormBlockedMessage(
-            'error',
-            timedOut ? 'Сервер мероприятия не ответил' : 'Не удалось загрузить данные мероприятия',
-            'Проверьте подключение и повторите попытку. Если ошибка повторяется, обратитесь к организатору.',
-            true
-          );
+          eventName = `Мероприятие №${id}`;
+          eventDate = '';
+          eventCity = '';
+          eventVenue = '';
+          titleEl.textContent = 'Регистрация на мероприятие';
+          infoEl.textContent = '';
+          venueInfoEl.style.display = 'none';
+          venueInfoEl.textContent = '';
+          errorEl.textContent = 'Не удалось загрузить сведения о мероприятии. Форма регистрации откроется без названия, даты и места проведения.';
+          errorEl.style.display = 'block';
+          hideLoadingHeaderState();
+          shouldLoadForm = true;
         })
         .finally(() => {
           if (!shouldLoadForm) {

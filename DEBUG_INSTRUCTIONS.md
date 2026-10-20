@@ -24,7 +24,7 @@
 
 ### 1️⃣ Откройте URL с параметром
 ```
-https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=845
+https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=329
 ```
 
 ### 2️⃣ Нажмите F12 для открытия DevTools

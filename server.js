@@ -9,6 +9,7 @@ require('dotenv').config();
 
 const app = express();
 app.use(helmet({
+  crossOriginEmbedderPolicy: false,
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -94,6 +95,7 @@ function getLeadWebhookUrl() {
 }
 
 app.get('/api/event/:id', createEventHandler());
+app.get('/api/loader', require('./api/loader'));
 
 // Serve friendly route for event-register
 app.get(['/event-register', '/event-register/'], (req, res) => {

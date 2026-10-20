@@ -36,7 +36,7 @@ test('event endpoint returns a bounded error when Bitrix never responds', async 
   });
 
   const response = createResponse();
-  await createEventHandler()({ method: 'GET', query: { id: '845' } }, response);
+  await createEventHandler()({ method: 'GET', query: { id: '329' } }, response);
 
   assert.equal(response.statusCode, 502);
   assert.equal(response.body.code, 'UPSTREAM_TIMEOUT');
@@ -49,7 +49,7 @@ test('event endpoint returns normalized event data when Bitrix responds', async 
     json: async () => ({
       result: {
         item: {
-          id: 845,
+          id: 329,
           ufCrm21EventState: 1111,
           ufCrm21_1739459683: 'OPEN',
           ufCrm21DpoName: 'Test event',
@@ -60,10 +60,10 @@ test('event endpoint returns normalized event data when Bitrix responds', async 
   });
 
   const response = createResponse();
-  await createEventHandler()({ method: 'GET', query: { id: '845' } }, response);
+  await createEventHandler()({ method: 'GET', query: { id: '329' } }, response);
 
   assert.equal(response.statusCode, 200);
-  assert.equal(response.body.id, 845);
+  assert.equal(response.body.id, 329);
   assert.equal(response.body.registrationOpen, true);
   assert.equal(response.body.city, 'Москва');
 });

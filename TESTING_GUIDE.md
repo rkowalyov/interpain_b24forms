@@ -3,7 +3,7 @@
 ## How to Verify Parameters Are Being Sent to Bitrix
 
 ### Method 1: Browser Console Logs
-1. Open https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=845
+1. Open https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=329
 2. Press `F12` to open Developer Tools
 3. Go to **Console** tab
 4. Fill out Step 1 of the form (Фамилия, Имя, Телефон, E-mail)
@@ -21,14 +21,14 @@
 5. Look for POST requests to `*.bitrix24.ru` or `crmform.bitrix24.ru`
 6. **Click on the request and check the "Payload" or "Request" section**
 7. You should see these parameters in the form data:
-   - `EVPASSPORT_ID=845`
+   - `EVPASSPORT_ID=329`
    - `EVENT_NAME=Конференция InterPain 2026`
    - `EVENT_DATE=2026-09-15`
    - `EVENT_CITY=Москва`
 
 ### Method 3: URL Parameters (Alternative)
 The form also passes `EVPASSPORT_ID` via URL parameter:
-- Query string: `?EVPASSPORT_ID=845`
+- Query string: `?EVPASSPORT_ID=329`
 - This is visible in the address bar and can be captured by backend
 
 ## Current Implementation
@@ -43,7 +43,7 @@ The form also passes `EVPASSPORT_ID` via URL parameter:
    - Script data attributes (passed but may not be read by Bitrix)
 
 ### Parameters Being Passed:
-- **EVPASSPORT_ID**: From URL parameter (e.g., 845)
+- **EVPASSPORT_ID**: From URL parameter (e.g., 329)
 - **EVENT_NAME**: From API endpoint /api/event/{id}
 - **EVENT_DATE**: ISO format from event data
 - **EVENT_CITY**: From event data

@@ -1,4 +1,7 @@
-const URL = process.env.URL || 'https://interpain-b24forms.vercel.app/event-register/?EVNUMBER=845';
+const URL = process.env.URL || 'https://interpain-b24forms.vercel.app/event-register/?EVPASSPORT_ID=329';
+const eventId = new URLSearchParams(new URL(URL).search).get('EVNUMBER')
+  || new URLSearchParams(new URL(URL).search).get('EVPASSPORT_ID')
+  || '329';
 
 (async () => {
   const pp = await import('puppeteer');
@@ -32,7 +35,7 @@ const URL = process.env.URL || 'https://interpain-b24forms.vercel.app/event-regi
             status: 200,
             contentType: 'application/json',
             body: JSON.stringify({
-              id: 845,
+              id: Number(eventId),
               found: true,
               registrationOpen: true,
               name: 'Headless test event',
