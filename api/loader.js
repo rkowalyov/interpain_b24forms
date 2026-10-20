@@ -14,7 +14,9 @@ module.exports = async (req, res) => {
   const formId = Number.isInteger(parsedFormId) && parsedFormId > 0 ? parsedFormId : DEFAULT_FORM_ID;
   const ts = req.query.ts || Date.now();
   const accountId = process.env.B24_CDN_ACCOUNT_ID || process.env.BITRIX_ACCOUNT_ID || 'b16533649';
-  const loaderPath = `/crm/form/loader_${formId}.js?${ts}`;
+  const perCdnTimeoutMs = Number(process.env.B24_LOADER_CDN_TIMEOUT_MS) || 1800;
+  const totalTimeoutMs = Number(process.env.B24_LOADER_TOTAL_TIMEOUT_MS) || 7000;
+  const deadline = Date.now() + totalTimeoutMs;
   const candidateBases = [];
 
   const envBases = String(process.env.B24_LOADER_CDN_BASES || process.env.BITRIX_LOADER_CDN_BASES || '')
@@ -36,12 +38,14 @@ module.exports = async (req, res) => {
     if (!candidateBases.includes(base)) candidateBases.push(base);
   }
 
-  const fetchWithTimeout = async (url, timeoutMs = 6000) => {
+  const fetchWithTimeout = async (url, timeoutMs) => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      return await fetch(url, { redirect: 'follow', signal: controller.signal });
+      const response = await fetch(url, { redirect: 'follow', signal: controller.signal });
+      const body = await response.arrayBuffer();
+      return { response, body };
     } finally {
       clearTimeout(timer);
     }
@@ -52,17 +56,22 @@ module.exports = async (req, res) => {
   async function fetchLoader(id) {
     let lastError = null;
     let lastResponse = null;
+    let lastBody = null;
     let selectedBase = null;
 
     for (const base of candidateBases) {
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 0) break;
+
       try {
         const url = buildUpstreamUrl(base, id);
-        const resp = await fetchWithTimeout(url, 6000);
+        const { response: resp, body } = await fetchWithTimeout(url, Math.min(perCdnTimeoutMs, remainingMs));
         if (resp && resp.ok) {
           selectedBase = base;
-          return { resp, base };
+          return { resp, body, base };
         }
         lastResponse = resp;
+        lastBody = body;
         lastError = new Error(`HTTP ${resp && resp.status ? resp.status : 'unknown'}`);
       } catch (error) {
         lastError = error;
@@ -70,7 +79,11 @@ module.exports = async (req, res) => {
     }
 
     if (lastResponse) {
-      return { resp: lastResponse, base: selectedBase || candidateBases[0] || `https://cdn-ru.bitrix24.ru/${accountId}` };
+      return {
+        resp: lastResponse,
+        body: lastBody,
+        base: selectedBase || candidateBases[0] || `https://cdn-ru.bitrix24.ru/${accountId}`
+      };
     }
 
     throw lastError || new Error('Bitrix loader request failed');
@@ -86,7 +99,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    let { resp, base } = await fetchLoader(formId);
+    let { resp, body, base } = await fetchLoader(formId);
     let usedFormId = formId;
     let usedFallback = false;
 
@@ -95,6 +108,7 @@ module.exports = async (req, res) => {
       try {
         const defaultLoad = await fetchLoader(DEFAULT_FORM_ID);
         resp = defaultLoad.resp;
+        body = defaultLoad.body;
         base = defaultLoad.base;
         usedFormId = DEFAULT_FORM_ID;
         usedFallback = true;
@@ -104,7 +118,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    const buf = Buffer.from(await resp.arrayBuffer());
+    const buf = Buffer.from(body);
     const jsText = buf.toString('utf8');
     const parsedMeta = parseMetaFromJs(jsText);
 

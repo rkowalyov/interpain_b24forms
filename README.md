@@ -14,12 +14,16 @@ Configuration options (optional):
 
 - `window.B24_LOADER_URL` — override Bitrix24 loader script URL if needed (default loader URL is used otherwise).
 - `window.EVENT_API_BASE` — base URL used to fetch event data; default is `/api/event`. The page requests `EVENT_API_BASE/{EVNUMBER}` and expects JSON `{ name, date, city }`.
+- `EVENT_API_TIMEOUT_MS` — server-side timeout for Bitrix event lookups in milliseconds; defaults to `6000`. The registration page stops waiting for event data after 8 seconds and reports a retryable error.
+- `B24_LOADER_CDN_TIMEOUT_MS` / `B24_LOADER_TOTAL_TIMEOUT_MS` — per-provider and total Vercel loader-proxy timeouts in milliseconds; default to `1800` and `7000`.
 - `B24_DEFAULT_FORM_ID` (Vercel env var) — default CRM form ID used by `/api/loader` when `CRMFNUMBER` is missing/invalid/unavailable. Default value is `739`.
 
 Loader modes for A/B testing:
 
 - no `mode` parameter — load the inline Bitrix form using the official Bitrix embed code; the browser loads the loader script directly from the Bitrix CDN.
 - `mode=old` — use the previous implementation, loading the Bitrix form through the Vercel `/api/loader` proxy.
+
+If the selected loader does not initialize the form, the page tries the other transport (direct Bitrix CDN or the same-origin loader proxy) and then shows a retry action instead of leaving the loading state visible.
 
 Examples: `/event-register/?EVNUMBER=845&CRMFNUMBER=739` uses the new default mode; `/event-register/?EVNUMBER=845&CRMFNUMBER=739&mode=old` uses the previous proxy mode. The form code is resolved from loader metadata unless `CRMFHASH` or `CRMFCODE` is supplied explicitly.
 
