@@ -1,0 +1,20 @@
+[Unit]
+Description=InterPain B24 registration service
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/interpain_b24forms
+Environment=NODE_ENV=production
+Environment=PORT=3001
+EnvironmentFile=/opt/interpain_b24forms/.env
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

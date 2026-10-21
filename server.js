@@ -10,12 +10,14 @@ require('dotenv').config();
 const app = express();
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: [
         "'self'",
         "'unsafe-inline'",
+        "'unsafe-eval'",
         "https://*.bitrix24.ru",
         "https://*.bitrix24.com",
         "https://cdn-ru.bitrix24.ru",
@@ -39,10 +41,22 @@ app.use(helmet({
         "ws:"
       ],
       fontSrc: ["'self'", "data:", "https:"] ,
-      frameSrc: ["'self'", "https://*.bitrix24.ru", "https://*.bitrix24.com"],
+      frameSrc: [
+        "'self'",
+        "https://*.bitrix24.ru",
+        "https://*.bitrix24.com",
+        "https://*.crmform.bitrix24.ru",
+        "https://*.crmform.bitrix24.com"
+      ],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
-      formAction: ["'self'", "https://*.bitrix24.ru", "https://*.bitrix24.com"],
+      formAction: [
+        "'self'",
+        "https://*.bitrix24.ru",
+        "https://*.bitrix24.com",
+        "https://*.crmform.bitrix24.ru",
+        "https://*.crmform.bitrix24.com"
+      ],
       upgradeInsecureRequests: []
     }
   }
