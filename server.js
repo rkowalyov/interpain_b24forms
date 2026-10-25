@@ -5,6 +5,7 @@ const cors = require('cors');
 const path = require('path');
 const { createCalendarWebhookHandler } = require('./lib/bitrix-calendar-webhook');
 const { createEventHandler } = require('./lib/bitrix-event-api');
+const { createSpravkaHandler } = require('./lib/bitrix-spravka');
 require('dotenv').config();
 
 const app = express();
@@ -87,7 +88,15 @@ app.use(cors({
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
 app.use(limiter);
 
-app.use(express.static(path.join(__dirname)));
+// The root is also the source checkout: never serve server code or deployment files.
+app.use(['/lib', '/deploy', '/scripts', '/test', '/node_modules', '/.git'], (req, res) => res.sendStatus(404));
+app.use((req, res, next) => {
+  if (/\.(?:env|md|json|js|ya?ml|conf|service|lock)$/i.test(req.path)) {
+    return res.sendStatus(404);
+  }
+  next();
+});
+app.use(express.static(path.join(__dirname), { dotfiles: 'deny' }));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
@@ -110,6 +119,11 @@ function getLeadWebhookUrl() {
 
 app.get('/api/event/:id', createEventHandler());
 app.get('/api/loader', require('./api/loader'));
+app.all('/api/spravka', createSpravkaHandler());
+app.get(['/spravka', '/spravka/'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.sendFile(path.join(__dirname, 'spravka.html'));
+});
 
 // Serve friendly route for event-register
 app.get(['/event-register', '/event-register/'], (req, res) => {

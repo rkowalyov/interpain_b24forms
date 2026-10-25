@@ -2,6 +2,13 @@
 
 Универсальные CRM формы для interpain.botrix24.ru
 
+## Справка по мероприятиям
+
+Страница `/spravka/` показывает количество связанных сделок по мероприятиям
+в стадии «Реализация». Использует существующий серверный вебхук и отдельный пароль
+`SPRAVKA_PASSWORD`. Полная настройка, правила подсчёта и проверка:
+[SPRAVKA_SETUP.md](SPRAVKA_SETUP.md).
+
 ## Event register page
 
 A simple external registration page is available at `/event-register` and expects the query param `EVNUMBER`.

@@ -16,6 +16,14 @@
   ],
   "routes": [
     {
+      "src": "^/spravka/?$",
+      "dest": "/spravka.html"
+    },
+    {
+      "src": "^/api/spravka/?$",
+      "dest": "/api/spravka.js"
+    },
+    {
       "src": "^/event-register/?$",
       "dest": "/event-register.html"
     },
