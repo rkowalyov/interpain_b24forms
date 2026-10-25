@@ -98,7 +98,7 @@
           if (url.protocol !== 'https:' || url.hostname !== 'interpain.bitrix24.ru') throw new Error('Некорректная ссылка на мероприятие.');
           link.href = url.href; link.target = '_blank'; link.rel = 'noopener noreferrer';
           link.dataset.testid = `link-event-${event.id}`;
-          heading.append(node('span',event.code,'code'),node('span','|','divider'),link,node('span','|','divider'),node('span',event.city || 'Город не указан','city'));
+          heading.append(node('span',String(event.id),'passport-id'),node('span',' | ','divider'),node('span',event.code,'code'),node('span',' | ','divider'),link,node('span',' | ','divider'),node('span',event.city || 'Город не указан','city'));
           const dl = node('dl');
           for (const [key,label] of labels) {
             if (!Number.isInteger(event.counts?.[key]) || event.counts[key] < 0) throw new Error('Сервер вернул некорректные подсчёты.');
