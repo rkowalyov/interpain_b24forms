@@ -30,7 +30,8 @@ function fixture({ overrideItems = items, overrideStatuses = statuses } = {}) {
         assert.deepEqual(params.filter, { '@stageId': ['DT1036_61:REAL'] });
         return overrideItems;
       }
-      assert.deepEqual(params.filter['@UF_CRM_DEAL_1738519959225'], ['323', '301']);
+      assert.ok(['323', '301'].includes(params.filter['=UF_CRM_DEAL_1738519959225']));
+      assert.equal('@UF_CRM_DEAL_1738519959225' in params.filter, false);
       return deals;
     }
   };
@@ -50,6 +51,31 @@ test('exact selection, strict code ordering, city, links, all four counts, dupli
 test('missing stage or code fails explicitly, not as zero counts', async () => {
   await assert.rejects(buildReport(fixture({ overrideStatuses: statuses.slice(0, -1) }), {}, base), /Не успешно отучились/);
   await assert.rejects(buildReport(fixture({ overrideItems: [{ ...items[0], code: '' }] }), {}, base), /не заполнено/);
+});
+
+test('scalar event filters retain stage selection and deduplicate multivalued links across requests', async () => {
+  const client = fixture();
+  const originalList = client.list;
+  const requestedIds = [];
+  const field = 'UF_CRM_DEAL_1738519959225';
+  const sharedDeal = { ID: 'shared', STAGE_ID: 'paid0', [field]: ['323', '301', '301'] };
+  client.list = async (method, params) => {
+    if (method !== 'crm.deal.list') return originalList(method, params);
+    const id = params.filter[`=${field}`];
+    requestedIds.push(id);
+    assert.equal(typeof id, 'string');
+    assert.equal(`@${field}` in params.filter, false);
+    assert.ok(params.filter['@STAGE_ID'].includes('paid0'));
+    assert.ok(params.filter['@STAGE_ID'].includes('declined1'));
+    return id === '323' ? [
+      sharedDeal, sharedDeal,
+      { ID: 'single', STAGE_ID: 'declined1', [field]: '323' }
+    ] : [sharedDeal];
+  };
+  const report = await buildReport(client, {}, base);
+  assert.deepEqual(requestedIds, ['323', '301']);
+  assert.deepEqual(report.events[0].counts, { paid: 1, checkIndividual: 0, checkCompany: 0, declined: 0 });
+  assert.deepEqual(report.events[1].counts, { paid: 1, checkIndividual: 0, checkCompany: 0, declined: 1 });
 });
 
 test('empty events produces empty successful report', async () => {
