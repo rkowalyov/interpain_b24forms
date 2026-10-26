@@ -6,7 +6,7 @@ const path = require('path');
 const { createCalendarWebhookHandler } = require('./lib/bitrix-calendar-webhook');
 const { createEventHandler } = require('./lib/bitrix-event-api');
 const { createSpravkaHandler, authorized } = require('./lib/bitrix-spravka');
-const { createBitrixSpravkaApp } = require('./lib/bitrix-spravka-app');
+const { createBitrixSpravkaApp, sessionCors } = require('./lib/bitrix-spravka-app');
 require('dotenv').config();
 
 const app = express();
@@ -85,10 +85,9 @@ const corsMiddleware = cors({
   },
   optionsSuccessStatus: 200
 });
-// Form navigation from Bitrix is authenticated by OAuth, not by CORS.
-// An unrelated ALLOWED_ORIGINS setting for lead forms must not block this entry.
-app.use((req, res, next) => req.method === 'POST' && req.path === '/spravka/bitrix'
-  ? next() : corsMiddleware(req, res, next));
+// Session entry/logout use explicit credentials, not ambient cookies.
+// The unrelated lead-form allowlist must not prevent entry or session revocation.
+app.use(sessionCors(corsMiddleware));
 
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
 app.use(limiter);
@@ -127,7 +126,7 @@ app.get('/api/loader', require('./api/loader'));
 const bitrixSpravkaApp = createBitrixSpravkaApp();
 // One shared report/cache; Basic is checked first and never depends on OAuth availability.
 app.all('/api/spravka', createSpravkaHandler({
-  authorize: (req, env) => authorized(req, env) || bitrixSpravkaApp.authorize(req)
+  authorize: (req, env, context) => authorized(req, env) || bitrixSpravkaApp.authorize(req, context)
 }));
 app.post('/spravka/bitrix', express.urlencoded({ extended: false, limit: '32kb' }), bitrixSpravkaApp.entry);
 app.get('/spravka/bitrix', (req, res) => res.redirect(303, '/spravka'));

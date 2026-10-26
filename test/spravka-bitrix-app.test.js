@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { createBitrixSpravkaApp, fileStore } = require('../lib/bitrix-spravka-app');
+const { createBitrixSpravkaApp, fileStore, sessionCors } = require('../lib/bitrix-spravka-app');
 const { createSpravkaHandler, authorized } = require('../lib/bitrix-spravka');
 
 const clientId = 'local.fixture-client';
@@ -48,6 +48,29 @@ function sessionOf(res) {
   return JSON.parse(found[1]).session;
 }
 const sessionRequest = token => ({method:'GET',headers:{authorization:`Bearer ${token}`}});
+
+test('browser logout revokes a real session despite an unrelated restricted lead-origin list',async t=>{
+  const express=require('express'),cors=require('cors');
+  const h=harness(),token=sessionOf(await login(h));
+  assert.equal(await h.app.authorize(sessionRequest(token)),true);
+  const app=express();
+  app.use(sessionCors(cors({origin:(origin,done)=>done(
+    origin==='https://another-allowed-site.example'?null:new Error('Origin rejected'),true
+  )})));
+  app.post('/api/spravka/bitrix/logout',h.app.logout);
+  app.post('/api/lead',(_req,res)=>res.sendStatus(204));
+  app.use((_error,_req,res,_next)=>res.sendStatus(403));
+  const server=app.listen(0,'127.0.0.1');
+  await new Promise(resolve=>server.once('listening',resolve));
+  t.after(()=>{server.closeAllConnections();server.close()});
+  const root=`http://127.0.0.1:${server.address().port}`;
+  const res=await fetch(root+'/api/spravka/bitrix/logout',{method:'POST',
+    headers:{Origin:'https://forms.eduinterpain.ru',Authorization:`Bearer ${token}`}});
+  assert.equal(res.status,204);assert.equal(res.headers.get('access-control-allow-origin'),null);
+  assert.equal(await h.app.authorize(sessionRequest(token)),false);
+  const lead=await fetch(root+'/api/lead',{method:'POST',headers:{Origin:'https://forms.eduinterpain.ru'}});
+  assert.equal(lead.status,403);
+});
 
 test('pairing needs the pinned app and portal administrator; OAuth never reaches HTML',async()=>{
   const h=harness(),res=await login(h);

@@ -2,13 +2,16 @@
 const express = require('express');
 const helmet = require('helmet');
 const path = require('node:path');
-const {createBitrixSpravkaApp} = require('../../lib/bitrix-spravka-app');
+const {createBitrixSpravkaApp,sessionCors} = require('../../lib/bitrix-spravka-app');
 const {createSpravkaHandler,authorized,GROUPS} = require('../../lib/bitrix-spravka');
 const root = path.join(__dirname,'../..');
 const app = express();
 app.use(helmet({contentSecurityPolicy:{directives:{scriptSrc:["'self'","'unsafe-inline'"],styleSrc:["'self'","'unsafe-inline'"]}}}));
 app.use(express.urlencoded({extended:false}));
 app.use(express.json());
+app.use(sessionCors(require('cors')({origin:(origin,done)=>done(
+  origin && origin !== 'https://another-allowed-site.example' ? new Error('QA origin rejected') : null,true
+)})));
 const env={SPRAVKA_PASSWORD:'qa-reserve-password-only-123',SPRAVKA_B24_CLIENT_ID:'local.fixture-client',SPRAVKA_B24_ENABLED:'1'};
 const applicationToken='fixture-application-token-123456';
 const memberId='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -23,7 +26,7 @@ const fields={code:{title:'Кодовое обозначение'},ufCrm21EventA
 const items=[{id:301,code:'26_10_10-11',title:'ДЕМО — Краснодар',stageId:'REAL',ufCrm21EventAddr:'(Краснодар), центр'},
   {id:323,code:'26_11_07-08',title:'ДЕМО — Москва',stageId:'REAL',ufCrm21EventAddr:'г. Москва, центр'}];
 process.env.B24_WEBHOOK_URL='https://interpain.bitrix24.ru/rest/1/fixture-only';
-const report=createSpravkaHandler({env,authorize:(req,config)=>authorized(req,config)||bitrix.authorize(req),
+const report=createSpravkaHandler({env,authorize:(req,config,context)=>authorized(req,config)||bitrix.authorize(req,context),
   clientFactory:()=>({call:async()=>({result:{fields}}),list:async method=>
     method==='crm.status.list'?statuses:method==='crm.item.list'?items:[]})});
 app.post('/spravka/bitrix',bitrix.entry);
