@@ -257,6 +257,20 @@ class GatewayTests(unittest.TestCase):
 
 
 class BootstrapTests(unittest.TestCase):
+    def test_ssh_directory_is_readable_even_under_restrictive_umask(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = pathlib.Path(directory) / "deploy-user"
+            previous = installer.os.umask(0o077)
+            try:
+                with mock.patch.object(installer, "HOME", home), \
+                        mock.patch.object(installer.os, "chown"):
+                    installer.install_authorized_key("ssh-ed25519 AAAA test-public-key")
+            finally:
+                installer.os.umask(previous)
+            self.assertEqual(home.stat().st_mode & 0o777, 0o755)
+            self.assertEqual((home / ".ssh").stat().st_mode & 0o777, 0o755)
+            self.assertEqual((home / ".ssh" / "authorized_keys").stat().st_mode & 0o777, 0o644)
+
     def test_build_user_cannot_replace_forced_command_authorized_key(self):
         with tempfile.TemporaryDirectory() as directory:
             home = pathlib.Path(directory) / "deploy-user"

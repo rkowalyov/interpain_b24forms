@@ -42,6 +42,7 @@ def install_authorized_key(key):
     HOME.mkdir(mode=0o755, exist_ok=True)
     HOME.chmod(0o755)
     ssh_directory.mkdir(mode=0o755)
+    ssh_directory.chmod(0o755)
     authorized = ssh_directory / "authorized_keys"
     forced = (
         'restrict,command="/usr/bin/sudo -n /usr/local/sbin/interpain-release '
