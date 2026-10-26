@@ -143,8 +143,11 @@
     (() => {
       const $ = id => document.getElementById(id);
       const {labels,formatSelectedReport} = globalThis.SpravkaText;
+      const initialBitrixSession = window.SPRAVKA_BITRIX?.session;
+      delete window.SPRAVKA_BITRIX;
+      let bitrixSession = typeof initialBitrixSession === 'string' && /^b24\.[a-zA-Z0-9_-]{43}$/.test(initialBitrixSession) ? initialBitrixSession : '';
       const api = window.SPRAVKA_API_URL || '/api/spravka';
-      let auth = '';
+      let auth = bitrixSession ? `Bearer ${bitrixSession}` : '';
       let busy = false;
       let reportData = null;
       let stale = false;
@@ -274,12 +277,12 @@
         $('login-button').textContent = 'Загружаем справку…';
         $('login-error').textContent = '';
         const wasOpen = !$('report').hidden;
-        if (wasOpen) { $('notice').hidden = false; $('notice').textContent = 'Обновляем справку…'; }
+        if (wasOpen) { $('notice').hidden = false; $('notice').textContent = reportData ? 'Обновляем справку…' : 'Загружаем справку…'; }
         try {
           const response = await fetch(api + (refresh ? '?refresh=1' : ''), {headers:{Authorization:auth},cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(65000)});
           const data = await response.json().catch(() => ({}));
           if (!response.ok) {
-            if (response.status === 401) { auth = ''; reportData = null; selectedIds.clear(); resetCopyState(); $('events').replaceChildren(); $('updated').textContent = ''; $('report').hidden = true; $('login').hidden = false; }
+            if (response.status === 401) { auth = ''; bitrixSession = ''; reportData = null; selectedIds.clear(); resetCopyState(); $('events').replaceChildren(); $('updated').textContent = ''; $('report').hidden = true; $('login').hidden = false; }
             throw new Error(data.error || 'Не удалось загрузить справку.');
           }
           render(data); $('login').hidden = true; $('report').hidden = false; $('password').value = '';
@@ -289,7 +292,9 @@
           else {
             stale = true;
             $('notice').hidden = false;
-            $('notice').textContent = `${message} Ниже показана предыдущая справка; дата обновления не изменилась.`;
+            $('notice').textContent = reportData
+              ? `${message} Ниже показана предыдущая справка; дата обновления не изменилась.`
+              : `${message} Данные справки не загружены. Повторите обновление или выйдите и используйте резервный пароль.`;
           }
         } finally {
           busy = false; $('login-button').disabled = false; $('refresh').disabled = false; $('logout').disabled = false;
@@ -318,10 +323,23 @@
         copyReturnFocus = null;
       });
       $('logout').addEventListener('click',() => {
+        const session = bitrixSession;
+        const warningEpoch = copyVersion + 1;
+        if (session) fetch('/api/spravka/bitrix/logout',{method:'POST',headers:{Authorization:`Bearer ${session}`},cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(10000)})
+          .then(response => { if (!response.ok) throw new Error('Logout not confirmed'); })
+          .catch(() => {
+            if (copyVersion === warningEpoch && !auth && $('report').hidden) $('login-error').textContent = 'Данные удалены с этой страницы, но сервер не подтвердил завершение сессии. Закройте вкладку; сессия ограничена сроком и проверкой доступа.';
+          });
+        bitrixSession = '';
         reportData = null; selectedIds.clear(); stale = false; resetCopyState();
         auth = ''; $('password').value = ''; $('events').replaceChildren(); $('updated').textContent = '';
-        $('report').hidden = true; $('login').hidden = false; $('notice').hidden = true; $('password').focus();
+        $('report').hidden = true; $('login').hidden = false; $('notice').hidden = true; $('login-error').textContent = ''; $('password').focus();
       });
+      if (bitrixSession) {
+        $('login').hidden = true;
+        $('report').hidden = false;
+        load();
+      }
     })();
   </script>
 </body>

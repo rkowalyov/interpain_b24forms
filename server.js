@@ -5,7 +5,8 @@ const cors = require('cors');
 const path = require('path');
 const { createCalendarWebhookHandler } = require('./lib/bitrix-calendar-webhook');
 const { createEventHandler } = require('./lib/bitrix-event-api');
-const { createSpravkaHandler } = require('./lib/bitrix-spravka');
+const { createSpravkaHandler, authorized } = require('./lib/bitrix-spravka');
+const { createBitrixSpravkaApp, sessionCors } = require('./lib/bitrix-spravka-app');
 require('dotenv').config();
 
 const app = express();
@@ -75,7 +76,7 @@ if (!process.env.BITRIX_WEBHOOK && !process.env.B24_WEBHOOK_URL) {
 if (!process.env.B24_WEBHOOK_URL && !process.env.BITRIX_WEBHOOK) {
   console.warn('[PROXY] WARNING: B24_WEBHOOK_URL is not set. /api/event/:id lookup may fail.');
 }
-app.use(cors({
+const corsMiddleware = cors({
   origin: function(origin, cb) {
     if (!origin) return cb(null, true); // allow non-browser tools and same-origin file access
     if (allowed.length === 0) return cb(null, true);
@@ -83,7 +84,10 @@ app.use(cors({
     return cb(new Error('Not allowed by CORS'));
   },
   optionsSuccessStatus: 200
-}));
+});
+// Session entry/logout use explicit credentials, not ambient cookies.
+// The unrelated lead-form allowlist must not prevent entry or session revocation.
+app.use(sessionCors(corsMiddleware));
 
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
 app.use(limiter);
@@ -119,7 +123,14 @@ function getLeadWebhookUrl() {
 
 app.get('/api/event/:id', createEventHandler());
 app.get('/api/loader', require('./api/loader'));
-app.all('/api/spravka', createSpravkaHandler());
+const bitrixSpravkaApp = createBitrixSpravkaApp();
+// One shared report/cache; Basic is checked first and never depends on OAuth availability.
+app.all('/api/spravka', createSpravkaHandler({
+  authorize: (req, env, context) => authorized(req, env) || bitrixSpravkaApp.authorize(req, context)
+}));
+app.post('/spravka/bitrix', express.urlencoded({ extended: false, limit: '32kb' }), bitrixSpravkaApp.entry);
+app.get('/spravka/bitrix', (req, res) => res.redirect(303, '/spravka'));
+app.post('/api/spravka/bitrix/logout', bitrixSpravkaApp.logout);
 app.get(['/spravka', '/spravka/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'spravka.html'));
@@ -154,6 +165,10 @@ app.post('/api/lead', async (req, res) => {
 app.post('/api/calendar-webhook', createCalendarWebhookHandler());
 
 app.use((err, req, res, next) => {
+  if (req.path === '/spravka/bitrix' || req.path === '/api/spravka/bitrix/logout') {
+    // Body-parser errors can include a fragment of the credential-bearing body.
+    return res.status(err.status === 413 ? 413 : 400).json({ error: 'Не удалось обработать запрос приложения.' });
+  }
   console.error(err && err.message);
   res.status(500).json({ error: err && err.message });
 });
