@@ -26,20 +26,26 @@
     label{display:block;font-size:var(--text-sm);margin-top:var(--space-5);margin-bottom:var(--space-2)}
     input{width:100%;padding:var(--space-3);border:1px solid var(--color-border);border-radius:5px;min-height:48px}
     .login button{width:100%;margin-top:var(--space-6)}.error{color:var(--color-error)}
-    .tools{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-6)}.actions{display:flex;gap:var(--space-2)}
+    .tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-6)}.actions{display:flex;flex-wrap:wrap;gap:var(--space-2)}
     .meta{font-size:var(--text-sm);color:var(--color-text-muted)}.meta strong{color:var(--color-text);font-weight:500}
     .message{padding:var(--space-5);background:var(--color-surface);border:1px solid var(--color-border);border-radius:6px;margin-bottom:var(--space-6);font-size:var(--text-sm)}
     article{background:var(--color-surface);border:1px solid var(--color-border);border-radius:7px;margin-bottom:var(--space-6);overflow:hidden;break-inside:avoid}
     .event-heading{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--space-2);padding:var(--space-5) var(--space-6);background:#f9fbfc;border-bottom:1px solid var(--color-border);font-size:var(--text-base);font-weight:500;overflow-wrap:anywhere}
     .event-heading .code{font-variant-numeric:tabular-nums;white-space:normal}.event-heading .divider{color:#71818e;font-weight:400}
     .event-heading a{min-width:0;line-height:1.6}.city{font-weight:400}
+    .event-header{display:flex;align-items:flex-start;border-bottom:1px solid var(--color-border);background:#f9fbfc}.event-header .event-heading{flex:1;min-width:0;border-bottom:0;background:transparent}
+    .copy-event{flex:none;margin:var(--space-5) var(--space-6) var(--space-5) 0;white-space:nowrap}
+    .copy-feedback{margin:0 0 var(--space-4);color:var(--color-success)}
+    .copy-buffer{position:fixed;left:0;top:0;width:1px;height:1px;opacity:0}
+    dialog{margin:auto;width:min(680px,calc(100% - 2rem));max-height:calc(100dvh - 2rem);overflow:auto;padding:var(--space-6);border:1px solid var(--color-border);border-radius:8px;color:var(--color-text);background:var(--color-surface)}
+    dialog::backdrop{background:rgb(23 46 64 / .4)}dialog textarea{display:block;width:100%;min-height:220px;height:min(42dvh,440px);resize:vertical;margin:var(--space-4) 0;padding:var(--space-3);font:inherit;font-size:var(--text-sm);color:var(--color-text);border:1px solid var(--color-border);border-radius:5px;background:var(--color-surface)}
     dl{padding:var(--space-3) var(--space-6)}.metric{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:var(--space-6);padding:var(--space-2) 0;font-size:var(--text-sm)}.metric+.metric{border-top:1px solid #edf1f4}
     dd{font-weight:600;font-variant-numeric:tabular-nums lining-nums}.metric:first-child dd{color:var(--color-success)}
     details{font-size:var(--text-sm);color:var(--color-text-muted);margin-top:var(--space-8)}summary{cursor:pointer;min-height:44px}details ul{padding-left:var(--space-6)}details li{margin-bottom:var(--space-2)}
     .skeleton{height:240px;border:1px solid var(--color-border);border-radius:7px;background:linear-gradient(#e5ebef 0 52px,#fff 52px);margin-bottom:var(--space-6)}
     footer{margin-top:var(--space-8);color:var(--color-text-muted);font-size:var(--text-xs)}
-    @media(max-width:600px){.bar{padding:var(--space-5) var(--space-4)}main{padding:var(--space-5) var(--space-4)}.login{margin:var(--space-6) auto;padding:var(--space-6)}.tools{align-items:flex-start;flex-direction:column}.actions{width:100%}.actions button{flex:1}.event-heading{padding:var(--space-4);gap:var(--space-2)}dl{padding:var(--space-2) var(--space-4)}}
-    @media print{body{background:white}.actions,.login,details,.skip,#notice,footer{display:none!important}header{border:0}.bar,main{padding:var(--space-4)}a{color:inherit;text-decoration:none}article{border-color:#aaa}.tools{margin-bottom:var(--space-4)}}
+    @media(max-width:600px){.bar{padding:var(--space-5) var(--space-4)}main{padding:var(--space-5) var(--space-4)}.login{margin:var(--space-6) auto;padding:var(--space-6)}.tools{align-items:flex-start;flex-direction:column}.actions{width:100%}.actions button{flex:1}#copy-all{flex-basis:100%}.event-heading{padding:var(--space-4);gap:var(--space-2)}.event-header{display:block}.copy-event{margin:0 var(--space-4) var(--space-4)}dl{padding:var(--space-2) var(--space-4)}}
+    @media print{body{background:white}.actions,.login,details,.skip,#notice,footer,.copy-event,.copy-feedback,dialog{display:none!important}header{border:0}.bar,main{padding:var(--space-4)}a{color:inherit;text-decoration:none}article{border-color:#aaa}.tools{margin-bottom:var(--space-4)}}
     @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
   </style>
 </head>
@@ -59,11 +65,20 @@
     </section>
     <section id="report" hidden aria-label="Справка по мероприятиям">
       <div class="tools"><div class="meta" id="updated" aria-live="polite" data-testid="text-updated"></div><div class="actions">
-        <button id="refresh" class="primary" data-testid="button-refresh">Обновить</button>
+        <button id="copy-all" class="primary" type="button" disabled data-testid="button-copy-all">Скопировать справку</button>
+        <button id="refresh" data-testid="button-refresh">Обновить</button>
         <button id="logout" data-testid="button-logout">Выйти</button>
       </div></div>
       <div id="notice" class="message" role="status" hidden data-testid="text-notice"></div>
+      <p id="copy-feedback" class="copy-feedback" role="status" aria-live="polite" hidden data-testid="text-copy-feedback"></p>
       <div id="events" aria-live="polite" data-testid="list-events"></div>
+      <dialog id="copy-dialog" aria-labelledby="copy-title" data-testid="dialog-copy">
+        <h2 id="copy-title">Текст справки</h2>
+        <p>Браузер не разрешил автоматическое копирование. Текст выделен: нажмите Ctrl+C или Cmd+C либо выберите «Копировать» в меню выделенного текста. Затем вставьте его в мессенджер.</p>
+        <label for="copy-content">Текст для копирования</label>
+        <textarea id="copy-content" readonly spellcheck="false" data-testid="textarea-copy"></textarea>
+        <button id="copy-close" type="button" data-testid="button-copy-close">Закрыть</button>
+      </dialog>
       <details data-testid="details-rules"><summary>Правила подсчёта</summary><ul>
         <li>Оплачено: «Оплачено, Собрать документы».</li>
         <li>Проверить ФЛ: «Проверить оплату ФЛ».</li>
@@ -73,19 +88,104 @@
       <footer>Вебхук используется только сервером. При выходе загруженные данные удаляются со страницы.</footer>
     </section>
   </main>
+  <script id="spravka-text">
+    (() => {
+      const labels = Object.freeze([['paid','Оплачено'],['checkIndividual','Проверить ФЛ'],['checkCompany','Проверить ЮЛ'],['declined','Отказались']].map(Object.freeze));
+      const clean = value => String(value ?? '').replace(/\s+/gu,' ').trim();
+      const staleWarning = 'Внимание: это предыдущая справка, обновить данные не удалось.';
+      function formatTime(value) {
+        return new Intl.DateTimeFormat('ru-RU',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Moscow'}).format(new Date(value));
+      }
+      function formatEvent(event) {
+        const header = [event.id,event.code,event.title,event.city || 'Город не указан'].map(clean).join(' | ');
+        return [header,...labels.map(([key,label]) => {
+          if (!Number.isInteger(event.counts?.[key]) || event.counts[key] < 0) throw new Error('Некорректные подсчёты.');
+          return `${label}: ${event.counts[key]}`;
+        })].join('\n');
+      }
+      function formatReport(data, stale = false) {
+        if (!Array.isArray(data.events)) throw new Error('Некорректная справка.');
+        const header = ['СПРАВКА','Мероприятия · стадия «Реализация»',`Обновлено: ${formatTime(data.generatedAt)} МСК`];
+        if (stale) header.push(staleWarning);
+        if (Array.isArray(data.warnings)) for (const warning of data.warnings) if (clean(warning)) header.push(`Примечание: ${clean(warning)}`);
+        return [header.join('\n'),...data.events.map(formatEvent)].join('\n\n');
+      }
+      const tools = Object.freeze({labels,formatEvent,formatReport,formatTime,staleWarning});
+      if (typeof module === 'object' && module.exports) module.exports = tools;
+      else globalThis.SpravkaText = tools;
+    })();
+  </script>
   <script>
     (() => {
       const $ = id => document.getElementById(id);
-      const labels = [['paid','Оплачено'],['checkIndividual','Проверить ФЛ'],['checkCompany','Проверить ЮЛ'],['declined','Отказались']];
+      const {labels,formatEvent,formatReport,formatTime,staleWarning} = globalThis.SpravkaText;
       const api = window.SPRAVKA_API_URL || '/api/spravka';
       let auth = '';
       let busy = false;
+      let reportData = null;
+      let stale = false;
+      let copying = false;
+      let copyVersion = 0;
+      let copyReturnFocus = null;
       const node = (tag, text, cls) => {
         const element = document.createElement(tag);
         if (text !== undefined) element.textContent = text;
         if (cls) element.className = cls;
         return element;
       };
+      function syncCopyButtons() {
+        $('copy-all').disabled = busy || copying || !reportData?.events.length;
+        document.querySelectorAll('.copy-event').forEach(button => { button.disabled = busy || copying || !reportData; });
+      }
+      function clearCopyFeedback() {
+        $('copy-feedback').hidden = true;
+        $('copy-feedback').textContent = '';
+        document.querySelectorAll('.copy-event').forEach(button => { button.textContent = 'Скопировать'; });
+      }
+      function resetCopyState() {
+        copyVersion++; copying = false; clearCopyFeedback();
+        if ($('copy-dialog').open) $('copy-dialog').close();
+        $('copy-content').value = '';
+        syncCopyButtons();
+      }
+      function legacyCopy(text) {
+        const active = document.activeElement;
+        const field = node('textarea',undefined,'copy-buffer');
+        field.value = text; field.readOnly = true; field.setAttribute('aria-label','Копируемый текст');
+        document.body.append(field);
+        try {
+          field.focus({preventScroll:true}); field.select(); field.setSelectionRange(0,text.length);
+          return typeof document.execCommand === 'function' && document.execCommand('copy');
+        } catch { return false; }
+        finally { field.remove(); active?.focus({preventScroll:true}); }
+      }
+      async function copyText(text, button, description) {
+        if (busy || copying || !reportData) return;
+        const version = copyVersion;
+        copying = true; clearCopyFeedback(); syncCopyButtons();
+        let copied = false;
+        try {
+          try {
+            if (globalThis.isSecureContext && navigator.clipboard?.writeText) {
+              await navigator.clipboard.writeText(text); copied = true;
+            }
+          } catch {}
+          if (version !== copyVersion || $('report').hidden) return;
+          if (!copied) copied = legacyCopy(text);
+          if (copied) {
+            $('copy-feedback').textContent = `${description} скопировано. Можно вставить в мессенджер.`;
+            $('copy-feedback').hidden = false;
+            if (button.classList.contains('copy-event')) button.textContent = 'Скопировано';
+          } else {
+            copyReturnFocus = button;
+            $('copy-content').value = text; $('copy-dialog').showModal();
+            $('copy-content').focus(); $('copy-content').select();
+            $('copy-content').setSelectionRange(0,text.length);
+          }
+        } finally {
+          if (version === copyVersion) { copying = false; syncCopyButtons(); }
+        }
+      }
       function render(data) {
         if (!Array.isArray(data.events)) throw new Error('Сервер вернул некорректную справку.');
         const fragment = document.createDocumentFragment();
@@ -107,7 +207,16 @@
             count.dataset.testid = `count-${key}-${event.id}`;
             row.append(node('dt',label),count); dl.append(row);
           }
-          article.append(heading,dl); fragment.append(article);
+          const copy = node('button','Скопировать','copy-event');
+          copy.type = 'button'; copy.dataset.testid = `button-copy-event-${event.id}`;
+          copy.setAttribute('aria-label',`Скопировать мероприятие ${event.id}`);
+          copy.addEventListener('click',() => {
+            const prefix = stale ? `${staleWarning}\nОбновлено: ${formatTime(reportData.generatedAt)} МСК\n\n` : '';
+            copyText(prefix + formatEvent(event),copy,`Мероприятие ${event.id}`);
+          });
+          const eventHeader = node('div',undefined,'event-header');
+          eventHeader.append(heading,copy);
+          article.append(eventHeader,dl); fragment.append(article);
         }
         const timestamp = new Intl.DateTimeFormat('ru-RU',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Moscow'}).format(new Date(data.generatedAt));
         $('events').replaceChildren(fragment);
@@ -115,10 +224,12 @@
         const warnings = data.warnings || [];
         $('notice').hidden = !!data.events.length && !warnings.length;
         $('notice').textContent = !data.events.length ? 'В стадии «Реализация» нет доступных мероприятий.' : warnings.join(' ');
+        reportData = data; stale = false; resetCopyState();
       }
       async function load(refresh = false) {
         if (busy) return;
         busy = true;
+        resetCopyState();
         $('login-button').disabled = true; $('refresh').disabled = true; $('logout').disabled = true;
         $('login-button').textContent = 'Загружаем справку…';
         $('login-error').textContent = '';
@@ -128,7 +239,7 @@
           const response = await fetch(api + (refresh ? '?refresh=1' : ''), {headers:{Authorization:auth},cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(65000)});
           const data = await response.json().catch(() => ({}));
           if (!response.ok) {
-            if (response.status === 401) { auth = ''; $('events').replaceChildren(); $('report').hidden = true; $('login').hidden = false; }
+            if (response.status === 401) { auth = ''; reportData = null; resetCopyState(); $('events').replaceChildren(); $('updated').textContent = ''; $('report').hidden = true; $('login').hidden = false; }
             throw new Error(data.error || 'Не удалось загрузить справку.');
           }
           render(data); $('login').hidden = true; $('report').hidden = false; $('password').value = '';
@@ -136,11 +247,13 @@
           const message = error.name === 'TimeoutError' ? 'Истекло время ожидания. Повторите загрузку.' : error.message;
           if ($('report').hidden) $('login-error').textContent = message;
           else {
+            stale = true;
             $('notice').hidden = false;
             $('notice').textContent = `${message} Ниже показана предыдущая справка; дата обновления не изменилась.`;
           }
         } finally {
           busy = false; $('login-button').disabled = false; $('refresh').disabled = false; $('logout').disabled = false;
+          syncCopyButtons();
           $('login-button').textContent = 'Открыть справку';
         }
       }
@@ -151,7 +264,17 @@
         load();
       });
       $('refresh').addEventListener('click',() => load(true));
+      $('copy-all').addEventListener('click',() => {
+        if (reportData?.events.length) copyText(formatReport(reportData,stale),$('copy-all'),'Содержимое справки');
+      });
+      $('copy-close').addEventListener('click',() => $('copy-dialog').close());
+      $('copy-dialog').addEventListener('close',() => {
+        $('copy-content').value = '';
+        if (reportData && !$('report').hidden && copyReturnFocus?.isConnected) copyReturnFocus.focus({preventScroll:true});
+        copyReturnFocus = null;
+      });
       $('logout').addEventListener('click',() => {
+        reportData = null; stale = false; resetCopyState();
         auth = ''; $('password').value = ''; $('events').replaceChildren(); $('updated').textContent = '';
         $('report').hidden = true; $('login').hidden = false; $('notice').hidden = true; $('password').focus();
       });
