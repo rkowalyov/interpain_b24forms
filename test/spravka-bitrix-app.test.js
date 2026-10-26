@@ -134,6 +134,31 @@ test('disabled integration can be paired safely but never emits a report session
   assert.equal(await h.app.authorize(sessionRequest('b24.'+'a'.repeat(43))),false);
 });
 
+test('all Bitrix entry outcomes announce frame readiness without granting report access',async()=>{
+  for (const config of [
+    {env:{SPRAVKA_B24_ENABLED:'0'}},
+    {},
+    {state:{admin:false}},
+    {env:{SPRAVKA_B24_CLIENT_ID:''}},
+    {state:{unavailable:true}}
+  ]) {
+    const h=harness(config),res=await login(h);
+    assert.match(res.body,/id="spravka-bitrix-frame-ready"/);
+    assert.ok(!res.body.includes(oauth)&&!res.body.includes(appToken));
+    assert.equal(res.headers['X-Frame-Options'],undefined);
+    assert.match(res.headers['Content-Security-Policy'],/frame-ancestors https:\/\/interpain\.bitrix24\.ru/);
+    if (config.env?.SPRAVKA_B24_ENABLED==='0' || res.code!==200) {
+      assert.ok(!res.body.includes('window.SPRAVKA_BITRIX='));
+      const req=sessionRequest('b24.'+'a'.repeat(43));
+      if (config.env?.SPRAVKA_B24_CLIENT_ID==='') {
+        await assert.rejects(h.app.authorize(req),error=>error.status===503);
+      } else {
+        assert.equal(await h.app.authorize(req),false);
+      }
+    }
+  }
+});
+
 test('uninstalled app cannot receive a usable report session',async()=>{
   const h=harness({state:{installed:false}}),res=await login(h);
   assert.equal(res.code,403);assert.ok(!res.body.includes('SPRAVKA_BITRIX='));

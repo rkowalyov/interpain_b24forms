@@ -33,6 +33,7 @@ test('Node.js serves /spravka, local font and protected API without external hos
     const html = await response.text();
     assert.match(html, /СПРАВКА/);
     assert.match(html, /\/assets\/fonts\/GolosText\.ttf/);
+    assert.doesNotMatch(html, /id="spravka-bitrix-frame-ready"/);
     assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com|vercel\.app/i);
   }
   const font = await fetch(root + '/assets/fonts/GolosText.ttf');
@@ -52,10 +53,14 @@ test('Node.js serves /spravka, local font and protected API without external hos
   });
   assert.equal(entry.status,503);
   assert.equal(entry.headers.get('x-frame-options'),null);
+  assert.equal(entry.headers.get('cross-origin-resource-policy'),'same-origin');
   assert.match(entry.headers.get('content-security-policy'),/frame-ancestors https:\/\/interpain\.bitrix24\.ru/);
-  assert.ok(!(await entry.text()).includes('fixture-token-never-disclosed'));
+  const entryHtml=await entry.text();
+  assert.ok(!entryHtml.includes('fixture-token-never-disclosed'));
+  assert.match(entryHtml,/id="spravka-bitrix-frame-ready"/);
   const original = await fetch(root + '/spravka');
   assert.equal(original.headers.get('x-frame-options'),'SAMEORIGIN');
+  assert.equal(original.headers.get('cross-origin-resource-policy'),'same-origin');
   assert.match(original.headers.get('content-security-policy'),/frame-ancestors 'self'/);
   const malformed = await fetch(root + '/spravka/bitrix', {
     method:'POST', headers:{'Content-Type':'application/json'},body:'{"AUTH_ID":"fixture-token-never-disclosed",'
