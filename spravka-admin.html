@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="description" content="Управление доступом к справке по мероприятиям.">
+  <title>Управление приложением · Справка</title>
+  <style>
+    @font-face{font-family:Golos;src:url('/assets/fonts/GolosText.ttf') format('truetype');font-weight:400 900;font-display:swap}
+    :root{--font-body:Golos,sans-serif;--text-xs:clamp(.75rem,.72rem + .12vw,.8rem);--text-sm:clamp(.875rem,.85rem + .12vw,.94rem);--text-base:clamp(1rem,.97rem + .12vw,1.06rem);--text-lg:clamp(1.125rem,1.04rem + .3vw,1.3rem);--text-xl:clamp(1.5rem,1.35rem + .4vw,1.8rem);--space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;--space-6:24px;--space-8:32px;--space-10:40px;--space-12:48px;--bg:#f2f5f7;--surface:#fff;--text:#172e40;--muted:#526574;--accent:#146389;--accent-hover:#0a4665;--line:#d6dfe5;--soft:#edf6fb;--success:#246347;--error:#9c2834}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:400 var(--text-base)/1.55 var(--font-body);-webkit-font-smoothing:antialiased}
+    button,input,select{font:inherit;color:inherit}button,a,input,select{-webkit-tap-highlight-color:transparent}
+    button,.button{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);min-height:44px;border:1px solid var(--line);border-radius:6px;padding:var(--space-2) var(--space-4);background:white;font-size:var(--text-sm);text-decoration:none;cursor:pointer;font-weight:500}
+    button:hover,.button:hover{background:#f0f5f8}.primary{background:var(--accent);border-color:var(--accent);color:#fff}.primary:hover{background:var(--accent-hover)}
+    button:disabled{background:#e8edf1;border-color:var(--line);color:#526574;cursor:default}a{color:var(--accent);text-underline-offset:3px}
+    :focus-visible{outline:3px solid #3988b2;outline-offset:3px}button.danger{color:var(--error);border-color:#d9b9bf}
+    [hidden]{display:none!important}.skip{position:absolute;top:-100px;left:16px;background:#fff;padding:12px;z-index:3}.skip:focus{top:8px}
+    .preview{padding:var(--space-3) var(--space-6);background:#fff3da;color:#674a12;font-size:var(--text-xs);border-bottom:1px solid #eadbbb}
+    .wrap{width:min(1088px,100%);margin:auto;padding-inline:var(--space-8)}
+    header{background:var(--surface);border-bottom:1px solid var(--line)}.top{display:flex;justify-content:space-between;align-items:center;gap:var(--space-6);padding-block:var(--space-6)}
+    .eyebrow{font-size:var(--text-xs);color:var(--muted);margin:0 0 var(--space-1)}h1{font-size:var(--text-xl);line-height:1.25;margin:0;font-weight:650;letter-spacing:-.03em}
+    .subtitle{font-size:var(--text-sm);color:var(--muted);margin:var(--space-2) 0 0}.top-actions{display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-2)}
+    .role{font-size:var(--text-xs);color:var(--muted)}.tabs{display:flex;gap:var(--space-6);overflow-x:auto;scrollbar-width:thin}
+    .tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;padding:var(--space-3) 0;white-space:nowrap;color:var(--muted);font-weight:500}
+    .tabs button[aria-selected=true]{border-color:var(--accent);color:var(--accent)}.tabs button:hover{color:var(--accent)}
+    main{padding-block:var(--space-8)}.section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--space-6);margin-bottom:var(--space-6)}
+    h2{font-size:var(--text-lg);line-height:1.4;margin:0;font-weight:650}h3{font-size:var(--text-base);margin:0 0 var(--space-2);font-weight:600}
+    p{font-size:var(--text-sm);color:var(--muted);margin:var(--space-2) 0 0;max-width:76ch}.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    .panel-pad{padding:var(--space-6)}.callout{background:var(--soft);padding:var(--space-4) var(--space-5);border:1px solid #c8dce9;border-radius:6px;font-size:var(--text-sm);color:#294c61;margin-bottom:var(--space-6)}
+    .empty{padding:var(--space-12) var(--space-6);text-align:center}.empty p{margin:var(--space-2) auto var(--space-5);max-width:52ch}
+    .empty h3{font-size:var(--text-base)}.table-head,.user-row{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr) 96px;gap:var(--space-4);align-items:center;padding:var(--space-4) var(--space-6)}
+    .table-head{background:#f9fbfc;color:var(--muted);font-size:var(--text-xs);border-bottom:1px solid var(--line)}.user-row+.user-row{border-top:1px solid #e8edf1}
+    .person{display:flex;gap:var(--space-3);align-items:center;min-width:0}.avatar{width:36px;height:36px;display:grid;place-items:center;background:#eaf0f4;border-radius:50%;color:#486071;font-size:var(--text-xs);flex:none}
+    .person strong{font-size:var(--text-sm);font-weight:500}.person small{display:block;color:var(--muted);font-size:var(--text-xs)}.access{font-size:var(--text-sm);color:var(--muted)}
+    .text-button{background:transparent;border:0;color:var(--accent);padding:8px}.below{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);margin-top:var(--space-5)}
+    .button-group{display:flex;flex-wrap:wrap;gap:var(--space-2)}.hint{font-size:var(--text-xs);color:var(--muted)}.count{font-size:var(--text-xs);font-weight:400;color:var(--muted);margin-left:var(--space-2)}
+    .feedback{margin-top:var(--space-4);padding:var(--space-3) var(--space-4);border-radius:5px;background:#edf5ef;color:var(--success);font-size:var(--text-sm)}.feedback.error{background:#fcf0f1;color:var(--error)}
+    .setting{display:grid;grid-template-columns:minmax(0,1fr) minmax(220px,.7fr);gap:var(--space-6);padding:var(--space-6);align-items:center}.setting+.setting{border-top:1px solid var(--line)}
+    label.check{display:flex;align-items:center;gap:var(--space-3);cursor:pointer;font-size:var(--text-sm);min-height:44px}
+    input[type=checkbox]{appearance:none;flex:none;width:22px;height:22px;margin:0;border:2px solid #6f92a7;border-radius:5px;background:#fff;cursor:pointer}
+    input[type=checkbox]:checked{background:#dff2ff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m4 10 4 4 8-8' fill='none' stroke='%2316648d' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/16px no-repeat;border-color:#4b8cb4}
+    input[type=search],select{width:100%;min-height:46px;border:1px solid var(--line);border-radius:5px;padding:var(--space-3);background:#fff;font-size:var(--text-sm)}
+    .locked{font-size:var(--text-sm);color:var(--success);display:flex;align-items:center;gap:var(--space-2)}.dot{width:7px;height:7px;background:var(--success);border-radius:50%;display:inline-block;flex:none}
+    .neutral{color:var(--muted)}.neutral .dot{background:#708795}.rules{margin-top:var(--space-6);font-size:var(--text-sm)}summary{min-height:44px;cursor:pointer;color:var(--accent)}.rules ul{padding-left:var(--space-5);color:var(--muted)}.rules li{margin-bottom:var(--space-2)}
+    .definition{margin:0}.definition>div{display:grid;grid-template-columns:210px minmax(0,1fr);gap:var(--space-6);padding:var(--space-4) 0}.definition>div+div{border-top:1px solid #e8edf1}dt{color:var(--muted);font-size:var(--text-sm)}dd{margin:0;font-size:var(--text-sm);overflow-wrap:anywhere}
+    .service-row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-6);padding:var(--space-6)}.service-row+.service-row{border-top:1px solid var(--line)}.service-row>div{min-width:0}.service-row>button{flex:none}
+    .danger-zone{margin-top:var(--space-6);border-color:#dcc6cb}.danger-label{color:var(--error)}footer{padding-top:var(--space-8);font-size:var(--text-xs);color:var(--muted);display:flex;flex-wrap:wrap;gap:var(--space-2) var(--space-5);justify-content:space-between}footer a{min-height:44px;display:inline-flex;align-items:center}
+    dialog{margin:auto;width:min(570px,calc(100% - 32px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid var(--line);border-radius:9px;padding:var(--space-6);color:var(--text);background:#fff}
+    dialog::backdrop{background:rgb(23 46 64/.38)}.dialog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-4);margin-bottom:var(--space-3)}.dialog-head button{min-width:44px;padding:6px;font-size:var(--text-lg)}
+    .field-label{display:block;font-size:var(--text-sm);margin:var(--space-5) 0 var(--space-2)}.picker{max-height:280px;overflow:auto;border:1px solid var(--line);border-radius:5px;margin-block:var(--space-4)}.picker label{padding:var(--space-3) var(--space-4)}.picker label+label{border-top:1px solid #e8edf1}
+    .dialog-actions{display:flex;justify-content:flex-end;gap:var(--space-2);margin-top:var(--space-6);flex-wrap:wrap}.dialog-note{margin-top:var(--space-4);padding:var(--space-3);background:#f6f8fa;border-radius:5px}
+    @media(max-width:700px){.wrap{padding-inline:var(--space-4)}.preview{padding-inline:var(--space-4)}.top{align-items:flex-start;flex-direction:column;gap:var(--space-4)}.top-actions{align-items:flex-start;flex-direction:row;flex-wrap:wrap;align-items:center}.tabs{gap:var(--space-5)}main{padding-block:var(--space-6)}.section-head{flex-direction:column;gap:var(--space-4)}.setting{grid-template-columns:1fr;gap:var(--space-3);padding:var(--space-5)}.table-head{display:none}.user-row{grid-template-columns:minmax(0,1fr) auto;padding:var(--space-4);gap:var(--space-2)}.user-row .access{grid-column:1;grid-row:2;padding-left:48px;font-size:var(--text-xs)}.user-row button{grid-column:2;grid-row:1 / 3}.below{align-items:flex-start;flex-direction:column}.panel-pad{padding:var(--space-5)}.definition>div{grid-template-columns:1fr;gap:var(--space-1)}.service-row{flex-direction:column;align-items:flex-start;padding:var(--space-5);gap:var(--space-4)}.role{display:none}.empty{padding:var(--space-8) var(--space-5)}}
+    @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}@media(forced-colors:active){input[type=checkbox]{appearance:auto;background-image:none!important}}
+  </style>
+</head>
+<body>
+  <a href="#main" class="skip" data-testid="link-skip">К настройкам</a>
+  <div class="preview" id="server-gate" role="status" hidden data-testid="text-server-gate">Вход сотрудников выключен на сервере. Список доступа можно подготовить, но включение требует отдельного согласования.</div>
+  <header>
+    <div class="wrap top">
+      <div><p class="eyebrow">Справка по мероприятиям</p><h1>Управление приложением</h1><p class="subtitle">Доступ сотрудников и настройки внутри Битрикс24</p></div>
+      <div class="top-actions"><button id="open-report" disabled data-testid="button-open-report">Открыть справку</button><span class="role" id="actor" data-testid="text-actor">Проверка администратора…</span></div>
+    </div>
+    <nav class="wrap tabs" role="tablist" aria-label="Управление приложением">
+      <button role="tab" id="tab-users" aria-controls="users" aria-selected="true" data-tab="users" data-testid="tab-users">Сотрудники</button>
+      <button role="tab" id="tab-settings" aria-controls="settings" aria-selected="false" tabindex="-1" data-tab="settings" data-testid="tab-settings">Настройки</button>
+      <button role="tab" id="tab-status" aria-controls="status" aria-selected="false" tabindex="-1" data-tab="status" data-testid="tab-status">Состояние и обновления</button>
+      <button role="tab" id="tab-service" aria-controls="service" aria-selected="false" tabindex="-1" data-tab="service" data-testid="tab-service">Обслуживание</button>
+    </nav>
+  </header>
+  <main class="wrap" id="main">
+    <div class="feedback error" id="global-error" role="alert" hidden data-testid="text-global-error"></div>
+    <div class="button-group" style="margin-bottom:16px"><button id="reload" data-testid="button-reload">Обновить данные панели</button><button id="logout-admin" data-testid="button-logout-admin">Выйти из управления</button></div>
+    <section id="users" role="tabpanel" aria-labelledby="tab-users">
+      <div class="section-head"><div><h2>Кому доступна справка <span class="count" id="user-count" data-testid="text-user-count"></span></h2><p>Выбранные сотрудники будут видеть одну и ту же полную справку. Их личные права на сделки не меняют состав отчёта.</p></div><button class="primary" id="add-users" disabled data-testid="button-add-users">Добавить сотрудников</button></div>
+      <div class="callout">Это список доступа к нашей справке, а не изменение штатных прав Битрикс24. Пустой список означает: доступ не предоставлен никому.</div>
+      <div class="panel" id="user-list" data-testid="list-users" aria-live="polite"><div class="empty">Загрузка сохранённого списка…</div></div>
+      <div class="below"><span class="hint" id="users-dirty" data-testid="text-users-dirty">Нет несохранённых изменений</span><div class="button-group"><button id="cancel-users" disabled data-testid="button-cancel-users">Отменить изменения</button><button class="primary" id="save-users" disabled data-testid="button-save-users">Сохранить доступ</button></div></div>
+      <div class="feedback" id="users-feedback" role="status" hidden data-testid="text-users-feedback"></div>
+    </section>
+    <section id="settings" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <div class="section-head"><div><h2>Настройки справки</h2><p>Управляйте входом из Битрикс24. Правила отбора мероприятий и подсчёта сделок остаются прежними.</p></div></div>
+      <form id="settings-form">
+        <div class="panel">
+          <div class="setting"><div><h3>Вход через Битрикс24</h3><p>Только для сотрудников из сохранённого списка. Серверный выключатель имеет приоритет над этой настройкой.</p></div><label class="check"><input type="checkbox" id="enabled" disabled data-testid="checkbox-enabled"><span id="enabled-label">Проверка…</span></label></div>
+          <div class="setting"><div><h3>Резервный вход по паролю</h3><p>Независимый вход по прямому адресу. Эта панель не позволяет его отключить или изменить пароль.</p></div><div class="locked"><span class="dot"></span>Сохраняется в любом случае</div></div>
+          <div class="setting"><div><h3>Повторное использование данных</h3><p>Общий кэш для обоих способов входа. Кнопка «Обновить» в справке запрашивает свежие данные.</p></div><div><label class="field-label" for="cache" style="margin-top:0">Срок кэша</label><select id="cache" disabled data-testid="select-cache"><option value="60" selected>1 минута</option><option value="300">5 минут</option><option value="600">10 минут</option></select></div></div>
+        </div>
+        <div class="below"><span class="hint">Настройки сохраняются на сервере</span><div class="button-group"><button type="button" id="cancel-settings" disabled data-testid="button-cancel-settings">Отменить изменения</button><button class="primary" id="save-settings" disabled data-testid="button-save-settings">Сохранить настройки</button></div></div>
+      </form>
+      <div class="feedback" id="settings-feedback" role="status" hidden data-testid="text-settings-feedback"></div>
+      <details class="rules" data-testid="details-rules"><summary>Правила формирования справки</summary><ul><li>Только мероприятия в стадии «Реализация».</li><li>Заголовок: ID паспорта | Кодовое обозначение | Название | Город.</li><li>Сортировка строго по «Кодовому обозначению».</li><li>Оплачено: «Оплачено, Собрать документы».</li><li>Проверить ФЛ: «Проверить оплату ФЛ».</li><li>Проверить ЮЛ: «Оформить договор/счет ЮЛ» + «Проверить оплату ЮЛ».</li><li>Отказались: «Не приехали (проигранная)» + «Отмена с возвратом» + «Не успешно отучились».</li></ul></details>
+    </section>
+    <section id="status" role="tabpanel" aria-labelledby="tab-status" hidden>
+      <div class="section-head"><div><h2>Состояние и обновления</h2><p>Параметры интеграции и результат проверки авторизации в Битрикс24. Проверка не формирует справку и не обращается к сделкам.</p></div></div>
+      <div class="panel panel-pad"><dl class="definition">
+        <div><dt>Портал</dt><dd>interpain.bitrix24.ru</dd></div>
+        <div><dt>Приложение</dt><dd id="app-id" data-testid="text-app-id">Проверка…</dd></div>
+        <div><dt>Адрес справки</dt><dd>forms.eduinterpain.ru/spravka</dd></div>
+        <div><dt>Проверка привязки</dt><dd class="neutral" id="connection-state" data-testid="text-connection">Не запускалась</dd></div>
+        <div><dt>Вход из Битрикс24</dt><dd id="status-enabled" data-testid="text-status-enabled">Проверка…</dd></div>
+        <div><dt>Версия сервера</dt><dd id="version" data-testid="text-version">Проверка…</dd></div>
+      </dl><div class="button-group" style="margin-top:24px"><button id="check-connection" data-testid="button-check-connection">Проверить подключение</button><button id="release" data-testid="button-release">Порядок обновления</button></div><div class="feedback" id="status-feedback" role="status" hidden data-testid="text-status-feedback"></div></div>
+      <div class="callout" style="margin-top:24px">Обновление кода и изменение доступов являются разными действиями. Слияние PR само по себе не должно включать вход сотрудников.</div>
+    </section>
+    <section id="service" role="tabpanel" aria-labelledby="tab-service" hidden>
+      <div class="section-head"><div><h2>Обслуживание приложения</h2><p>Проверка привязки, штатные настройки и отдельные действия с интеграцией.</p></div></div>
+      <div class="panel">
+        <div class="service-row"><div><h3>Восстановление подключения</h3><p>Проверяем привязку существующего приложения и полномочия администратора. Удалять приложение не требуется.</p></div><button id="repair" data-testid="button-repair">Проверить привязку</button></div>
+        <div class="service-row"><div><h3>Настройки в Битрикс24</h3><p>Штатная карточка локальной интеграции: параметры обработчика и разрешения REST.</p></div><button id="native" data-testid="button-native">Открыть настройки</button></div>
+      </div>
+      <div class="panel danger-zone">
+        <div class="service-row"><div><h3>Переустановка</h3><p>Не способ обновить код. После удаления потребуется создать локальное приложение заново и восстановить привязку.</p></div><button id="reinstall" data-testid="button-reinstall">Как переустановить</button></div>
+        <div class="service-row"><div><h3 class="danger-label">Удаление интеграции</h3><p>Отдельное действие в штатном интерфейсе Битрикс24. Эта панель ничего не удаляет автоматически.</p></div><button class="danger" id="delete" data-testid="button-delete">Удаление…</button></div>
+      </div>
+    </section>
+    <footer><span>OAuth и ключи остаются на сервере</span><a href="/spravka" target="_blank" rel="noopener noreferrer" data-testid="link-reserve">Резервный вход по паролю</a></footer>
+  </main>
+  <dialog id="picker-dialog" aria-labelledby="picker-title" data-testid="dialog-picker">
+    <div class="dialog-head"><h2 id="picker-title">Добавить сотрудников</h2><button type="button" data-close="picker-dialog" aria-label="Закрыть выбор сотрудников" data-testid="button-close-picker">×</button></div>
+    <p>Активные сотрудники вашего портала. Имена и должности загружаются через Битрикс24.</p>
+    <label for="search" class="field-label">Фамилия, имя или отчество</label><input type="search" id="search" maxlength="100" placeholder="Найти сотрудника" data-testid="input-search">
+    <div class="picker" id="picker-list" data-testid="list-picker"></div>
+    <button type="button" id="more-users" hidden data-testid="button-more-users">Показать ещё</button><p id="picker-error" class="error" role="alert" hidden data-testid="text-picker-error"></p><span class="hint" id="picker-count" role="status" data-testid="text-picker-count">Выбрано: 0</span>
+    <div class="dialog-actions"><button type="button" data-close="picker-dialog" data-testid="button-cancel-picker">Отмена</button><button class="primary" id="confirm-add" disabled data-testid="button-confirm-add">Добавить выбранных</button></div>
+  </dialog>
+  <dialog id="info-dialog" aria-labelledby="info-title" data-testid="dialog-info">
+    <div class="dialog-head"><h2 id="info-title"></h2><button data-close="info-dialog" aria-label="Закрыть пояснение" data-testid="button-close-info">×</button></div>
+    <div id="info-content"></div><div class="dialog-actions"><button data-close="info-dialog" data-testid="button-dismiss-info">Понятно</button></div>
+  </dialog>
+  <script>
+    (() => {
+      'use strict';
+      /* SPRAVKA_ADMIN_BOOTSTRAP */
+      let credentials = window.SPRAVKA_ADMIN;
+      delete window.SPRAVKA_ADMIN;
+      const $ = id => document.getElementById(id);
+      const directory = new Map();
+      let state, draftUsers = [], picked = new Set(), results = [], next = null;
+      let loaded = false, saving = false, searchGeneration = 0, searchTimer;
+      function node(tag,text,className) {const e=document.createElement(tag); if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;}
+      function notice(id,text,error=false){const e=$(id);e.textContent=text;e.classList.toggle('error',error);e.hidden=false;}
+      function dirtyUsers(){return loaded && [...state.settings.allowedUserIds].sort().join('|')!==[...draftUsers].sort().join('|');}
+      async function api(action,{method='GET',body}={}){
+        if(!credentials?.session)throw new Error('Заново откройте приложение в Битрикс24.');
+        const response=await fetch('/api/spravka/bitrix/admin/'+action,{method,
+          headers:{Authorization:'Bearer '+credentials.session,...(method!=='GET'?{'Content-Type':'application/json','X-Spravka-CSRF':credentials.csrf}:{})},
+          ...(body?{body:JSON.stringify(body)}:{}),credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(65000)});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok){
+          if([401,403].includes(response.status)&&data.code!=='REPORT_NOT_ALLOWED'){
+            credentials=null;loaded=false;$('user-list').replaceChildren();$('picker-list').replaceChildren();directory.clear();
+            $('actor').textContent='Сессия завершена';$('add-users').disabled=true;$('open-report').disabled=true;
+            $('save-users').disabled=true;$('save-settings').disabled=true;$('enabled').disabled=true;$('cache').disabled=true;
+            notice('global-error','Доступ к управлению больше не подтверждён. Заново откройте приложение в Битрикс24.',true);
+          }
+          throw new Error(data.error||'Не удалось выполнить запрос.');
+        }
+        return data;
+      }
+      function renderUsers(){
+        const list=$('user-list');list.replaceChildren();
+        $('user-count').textContent=`${draftUsers.length} ${draftUsers.length===1?'сотрудник':draftUsers.length>1&&draftUsers.length<5?'сотрудника':'сотрудников'}`;
+        if(!draftUsers.length){
+          const box=node('div',undefined,'empty');box.append(node('h3','Сотрудники ещё не выбраны'),node('p','Добавьте тех, кому нужна справка. Пустой список не предоставляет доступ никому.'));list.append(box);
+        }else{
+          const head=node('div',undefined,'table-head');['Сотрудник','Доступ',''].forEach(t=>head.append(node('span',t)));list.append(head);
+          draftUsers.map(id=>directory.get(id)||{id,name:`Сотрудник №${id}`,position:'Не найден среди активных сотрудников'}).forEach(u=>{
+            const row=node('div',undefined,'user-row');row.dataset.testid=`row-user-${u.id}`;
+            const person=node('div',undefined,'person'), avatar=node('span',u.name.split(' ').map(v=>v[0]).slice(0,2).join(''),'avatar'), names=node('div');
+            avatar.setAttribute('aria-hidden','true');names.append(node('strong',u.name),node('small',u.position));person.append(avatar,names);
+            const remove=node('button','Убрать','text-button');remove.type='button';remove.setAttribute('aria-label',`Убрать: ${u.name}`);remove.dataset.testid=`button-remove-${u.id}`;
+            remove.disabled=saving;
+            remove.addEventListener('click',()=>{draftUsers=draftUsers.filter(id=>id!==u.id);$('users-feedback').hidden=true;renderUsers();});
+            row.append(person,node('span','Просмотр всей справки','access'),remove);list.append(row);
+          });
+        }
+        const dirty=dirtyUsers();$('save-users').disabled=!dirty||saving;$('cancel-users').disabled=!dirty||saving;$('add-users').disabled=!loaded||saving;$('users-dirty').textContent=saving?'Сохранение…':dirty?'Есть несохранённые изменения':'Нет несохранённых изменений';
+      }
+      function renderPicker(){
+        const list=$('picker-list');list.replaceChildren();
+        const found=results.filter(u=>!draftUsers.includes(u.id));
+        if(!found.length){const p=node('p','На этой странице нет новых сотрудников. Измените запрос или загрузите следующую страницу.');p.style.padding='16px';list.append(p);}
+        found.forEach(u=>{
+          const label=node('label',undefined,'check'),input=node('input');input.type='checkbox';input.value=u.id;input.checked=picked.has(u.id);input.dataset.testid=`checkbox-user-${u.id}`;
+          const text=node('span');text.append(node('span',u.name));const small=node('small',u.position);small.style.cssText='display:block;color:var(--muted);font-size:var(--text-xs)';text.append(small);
+          input.addEventListener('change',()=>{input.checked?picked.add(u.id):picked.delete(u.id);pickerCount();});label.append(input,text);list.append(label);
+        });pickerCount();
+        $('more-users').hidden=next===null;
+      }
+      function pickerCount(){$('picker-count').textContent=`Выбрано: ${picked.size}`;$('confirm-add').disabled=!picked.size;}
+      function showError(id,error){notice(id,error.name==='TimeoutError'?'Истекло время ожидания. Повторите запрос.':error.message,true);}
+      async function searchUsers(append=false){
+        const generation=++searchGeneration;
+        $('picker-error').hidden=true;$('more-users').disabled=true;
+        if(!append){results=[];next=null;$('picker-list').textContent='Загрузка сотрудников…';$('more-users').hidden=true;}
+        try{
+          const data=await api('employees?start='+(append?next:0)+'&query='+encodeURIComponent($('search').value.trim()));
+          if(generation!==searchGeneration)return;
+          data.users.forEach(u=>directory.set(u.id,u));
+          results=append?[...new Map([...results,...data.users].map(u=>[u.id,u])).values()]:data.users;
+          next=data.next;renderPicker();
+        }catch(e){if(generation===searchGeneration){showError('picker-error',e);$('picker-list').replaceChildren();}}
+        finally{if(generation===searchGeneration)$('more-users').disabled=false;}
+      }
+      $('add-users').onclick=()=>{picked=new Set();pickerCount();$('search').value='';$('picker-dialog').showModal();$('search').focus();searchUsers();};
+      $('search').oninput=()=>{clearTimeout(searchTimer);++searchGeneration;searchTimer=setTimeout(()=>searchUsers(),250);};
+      $('more-users').onclick=()=>searchUsers(true);
+      $('confirm-add').onclick=()=>{draftUsers=[...new Set([...draftUsers,...picked])];$('picker-dialog').close();$('users-feedback').hidden=true;renderUsers();};
+      function syncSettings(){
+        const dirty=loaded&&($('enabled').checked!==state.settings.enabled||Number($('cache').value)!==state.settings.cacheSeconds);
+        $('save-settings').disabled=!dirty||saving;$('cancel-settings').disabled=!dirty||saving;
+        $('enabled').disabled=!loaded||saving||(!state.serverEnabled&&!$('enabled').checked);$('cache').disabled=!loaded||saving;
+        $('enabled-label').textContent=$('enabled').checked?'Включён':'Выключен';
+      }
+      function status(){
+        $('server-gate').hidden=state.serverEnabled;
+        $('actor').textContent=(state.actor.name||`Сотрудник №${state.actor.userId}`)+' · администратор';
+        $('app-id').textContent='«Справка по мероприятиям» · №'+state.appId;
+        $('status-enabled').textContent=!state.serverEnabled?'Выключен на сервере':state.settings.enabled?'Включён для сохранённого списка':'Выключен в настройках';
+        $('version').textContent=state.version||'Версия не определена: нет метаданных выпуска';
+        $('open-report').disabled=!(state.serverEnabled&&state.settings.enabled&&state.settings.allowedUserIds.includes(state.actor.userId));
+        $('open-report').title=$('open-report').disabled?'Нужны включённый вход и ваш ID в сохранённом списке':'Откроется в отдельной вкладке';
+      }
+      async function save(value,feedback){
+        if(!loaded||saving)return;
+        saving=true;renderUsers();syncSettings();
+        try{const data=await api('settings',{method:'PUT',body:value});state.settings=data.settings;status();notice(feedback,'Изменения сохранены на сервере.');}
+        catch(e){showError(feedback,e);}
+        finally{saving=false;renderUsers();syncSettings();}
+      }
+      $('save-users').onclick=()=>{
+        if(state.settings.enabled&&!draftUsers.length){notice('users-feedback','Сначала выключите вход через Битрикс24 в настройках.',true);return;}
+        save({...state.settings,allowedUserIds:[...draftUsers]},'users-feedback');
+      };
+      $('cancel-users').onclick=()=>{draftUsers=[...state.settings.allowedUserIds];$('users-feedback').hidden=true;renderUsers();};
+      $('enabled').onchange=syncSettings;$('cache').onchange=syncSettings;
+      $('settings-form').onsubmit=e=>{
+        e.preventDefault();
+        if(!loaded)return;
+        if($('enabled').checked&&!state.settings.allowedUserIds.length){notice('settings-feedback','Сначала добавьте и сохраните хотя бы одного сотрудника.',true);return;}
+        save({...state.settings,enabled:$('enabled').checked,cacheSeconds:Number($('cache').value)},'settings-feedback');
+      };
+      $('cancel-settings').onclick=()=>{$('enabled').checked=state.settings.enabled;$('cache').value=String(state.settings.cacheSeconds);$('settings-feedback').hidden=true;syncSettings();};
+      async function load(){
+        if(saving)return;
+        if(loaded&&(dirtyUsers()||!$('save-settings').disabled)&&!confirm('Заменить несохранённые изменения данными сервера?'))return;
+        $('reload').disabled=true;
+        try{
+          const fresh=await api('state');directory.clear();let start=0,seen=new Set();
+          if(fresh.settings.allowedUserIds.length)do{
+            const data=await api('employees?selected=1&start='+start);data.users.forEach(u=>directory.set(u.id,u));
+            if(data.next!==null&&seen.has(data.next))throw new Error('Ошибка постраничной загрузки сотрудников.');
+            seen.add(start);start=data.next;
+          }while(start!==null);
+          state=fresh;loaded=true;draftUsers=[...state.settings.allowedUserIds];$('enabled').checked=state.settings.enabled;$('cache').value=String(state.settings.cacheSeconds);
+          status();renderUsers();syncSettings();$('global-error').hidden=true;
+        }catch(e){showError('global-error',e);}
+        finally{$('reload').disabled=false;}
+      }
+      $('reload').onclick=load;
+      $('logout-admin').onclick=async()=>{
+        if(!credentials)return;
+        try{const r=await fetch('/api/spravka/bitrix/logout',{method:'POST',headers:{Authorization:'Bearer '+credentials.session},credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(10000)});if(!r.ok)throw new Error('Сервер не подтвердил выход. Повторите попытку.');}
+        catch(e){showError('global-error',e);return;}
+        credentials=null;loaded=false;document.querySelector('main').replaceChildren(node('h2','Сессия управления завершена'),node('p','Заново откройте приложение из меню Битрикс24.'));
+      };
+      $('open-report').onclick=async()=>{
+        $('open-report').disabled=true;
+        try{
+          const grant=await api('report',{method:'POST'});
+          const form=node('form');form.method='POST';form.action='/spravka/bitrix/report';form.target='_blank';form.rel='noopener noreferrer';form.hidden=true;
+          const input=node('input');input.type='hidden';input.name='session';input.value=grant.session;form.append(input);document.body.append(form);form.submit();form.remove();
+        }catch(e){showError('global-error',e);}finally{if(loaded)status();}
+      };
+      const tabs=Array.from(document.querySelectorAll('[role=tab]'));
+      function selectTab(tab){tabs.forEach(t=>{const active=t===tab;t.setAttribute('aria-selected',String(active));t.tabIndex=active?0:-1;$(t.dataset.tab).hidden=!active;});}
+      tabs.forEach((tab,index)=>{tab.onclick=()=>selectTab(tab);tab.onkeydown=e=>{let next;if(e.key==='ArrowRight')next=tabs[(index+1)%tabs.length];if(e.key==='ArrowLeft')next=tabs[(index+tabs.length-1)%tabs.length];if(e.key==='Home')next=tabs[0];if(e.key==='End')next=tabs[tabs.length-1];if(next){e.preventDefault();selectTab(next);next.focus();}};});
+      document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>$(b.dataset.close).close());
+      function info(title,paragraphs,options={}){
+        $('info-title').textContent=title;const content=$('info-content');content.replaceChildren();paragraphs.forEach(t=>content.append(node('p',t)));
+        if(options.url){const note=node('div',undefined,'dialog-note');note.append(node('p',options.label||'Адрес штатных настроек:'),node('p',options.url));if(options.confirm){const label=node('label',undefined,'check'),input=node('input');input.type='checkbox';input.dataset.testid='checkbox-confirm-delete';label.append(input,node('span','Понимаю: удаление выполняется в Битрикс24 и требует отдельного подтверждения.'));note.append(label);const a=node('a','Перейти в Битрикс24','button');a.href=options.url;a.target='_blank';a.rel='noopener noreferrer';a.dataset.testid='link-native-settings';a.hidden=true;input.onchange=()=>a.hidden=!input.checked;note.append(a);}else{const a=node('a',options.button||'Перейти в Битрикс24','button');a.href=options.url;a.target='_blank';a.rel='noopener noreferrer';a.dataset.testid='link-native-settings';note.append(a);}content.append(note);}
+        if(options.docs){const a=node('a','Документация Битрикс24');a.href=options.docs;a.target='_blank';a.rel='noopener noreferrer';a.dataset.testid='link-lifecycle-docs';content.append(a);}
+        $('info-dialog').showModal();
+      }
+      const nativeUrl='https://interpain.bitrix24.ru/devops/edit/application/179/';
+      async function check(){
+        $('check-connection').disabled=true;$('repair').disabled=true;
+        try{const data=await api('check',{method:'POST'});const time=new Intl.DateTimeFormat('ru-RU',{dateStyle:'short',timeStyle:'short',timeZone:'Europe/Moscow'}).format(new Date(data.checkedAt));
+          $('connection-state').textContent='Подтверждена · '+time+' МСК';notice('status-feedback','Портал, приложение, активный пользователь и права администратора подтверждены. Сделки не запрашивались.');
+        }catch(e){$('connection-state').textContent='Не подтверждена';showError('global-error',e);}
+        finally{$('check-connection').disabled=false;$('repair').disabled=false;}
+      }
+      $('check-connection').onclick=check;
+      $('release').onclick=()=>info('Обновление приложения',['Код выпускается через защищённое окружение GitHub Actions после отдельного подтверждения.','Панель не запускает выпуск и не получает SSH-ключи или токены GitHub. Перезапуска приложения здесь нет.'],{url:'https://github.com/rkowalyov/interpain_b24forms/actions/workflows/spaceweb.yml',label:'Защищённый процесс выпуска:',button:'Открыть GitHub Actions'});
+      $('repair').onclick=()=>{selectTab(tabs.find(t=>t.dataset.tab==='status'));check();};
+      $('native').onclick=()=>info('Штатные настройки Битрикс24',['Переход откроет карточку локальной интеграции. Сама панель ничего не сохранит и не изменит.','Этот раздел Битрикс24 управляет параметрами интеграции и REST-разрешениями. Список доступа к нашей справке настраивается отдельно во вкладке «Сотрудники».'],{url:nativeUrl});
+      $('reinstall').onclick=()=>info('Переустановка не равна обновлению',['Для обновления справки достаточно выпуска кода на SpaceWeb. Удалять локальное приложение не требуется.','После удаления локальное приложение создаётся заново и получает новые client_id и client_secret. Потребуется новая серверная привязка.','Эта панель не переустанавливает приложение. Резервный вход по паролю сохраняется независимо от интеграции.'],{docs:'https://apidocs.bitrix24.ru/settings/app-uninstallation.html'});
+      $('delete').onclick=()=>info('Удаление интеграции',['Здесь можно только перейти в штатные настройки Битрикс24; удаление и его подтверждение находятся на стороне портала.','Для временной паузы выключите вход, не удаляя приложение.','Панель не удаляет сайт справки, пароль или данные CRM.'],{url:nativeUrl,confirm:true,docs:'https://apidocs.bitrix24.ru/settings/app-uninstallation.html'});
+      load();
+    })();
+  </script>
+</body>
+</html>

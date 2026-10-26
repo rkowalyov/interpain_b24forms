@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const { createBitrixSpravkaApp, fileStore, sessionCors } = require('../lib/bitrix-spravka-app');
 const { createSpravkaHandler, authorized } = require('../lib/bitrix-spravka');
+const { defaults } = require('../lib/bitrix-spravka-settings');
 
 const clientId = 'local.fixture-client';
 const oauth = 'fixture-oauth-not-a-real-token-12345';
@@ -24,8 +25,12 @@ function harness(overrides = {}) {
   const env = {SPRAVKA_B24_CLIENT_ID:clientId,SPRAVKA_B24_ENABLED:'1',...overrides.env};
   const state = {record:null,admin:true,revoked:false,unavailable:false,code:clientId,installed:true,user:'17',active:true,calls:[],...overrides.state};
   const store = { read:async()=>state.record, create:async record => (state.record ||= record) };
+  let settings = {...defaults(),enabled:true,allowedUserIds:['17','19']};
+  const policyStore = {read:async()=>structuredClone(settings),write:async(_binding,revision,value)=>{
+    assert.equal(revision,settings.revision);settings={...value,revision:revision+1};return structuredClone(settings);
+  }};
   let clock = 100000;
-  const app = createBitrixSpravkaApp({env,store,now:()=>clock,fetchImpl:async(url,options)=>{
+  const app = createBitrixSpravkaApp({env,store,policyStore,now:()=>clock,fetchImpl:async(url,options)=>{
     state.calls.push({url,options});
     assert.ok(url.startsWith('https://interpain.bitrix24.ru/rest/'));
     assert.equal(options.redirect,'error');
@@ -33,14 +38,27 @@ function harness(overrides = {}) {
     if (state.unavailable) throw new Error(`private failure ${oauth}`);
     const method = url.split('/').pop();
     const result = method==='app.info.json'?{ID:8,CODE:state.code,STATUS:'L',INSTALLED:state.installed}:
-      method==='user.current.json'?{ID:state.user,ACTIVE:state.active}:state.admin;
+      method==='user.current.json'?{ID:state.user,ACTIVE:state.active}:
+      method==='user.get.json'?[{ID:state.user,ACTIVE:state.active,USER_TYPE:'employee'}]:state.admin;
     return {ok:!state.revoked,status:state.revoked?401:200,text:async()=>JSON.stringify(
       state.revoked?{error:'user_access_error',error_description:oauth}:{result})};
   }});
   return {app,state,env,advance:ms=>{clock+=ms;}};
 }
 async function login(h, req = request()) {
-  const res=response(); await h.app.entry(req,res); return res;
+  const res=response(); await h.app.entry(req,res);
+  // Admins now land in management. Existing report regression cases explicitly
+  // request a report grant through that independently authorized admin session.
+  const match=/window\.SPRAVKA_ADMIN=({[^;]+});/.exec(res.body||'');
+  if(match && h.env.SPRAVKA_B24_ENABLED==='1'){
+    const boot=JSON.parse(match[1]),grant=response();
+    await h.app.admin({method:'POST',params:{action:'report'},headers:{
+      authorization:`Bearer ${boot.session}`,'x-spravka-csrf':boot.csrf
+    }},grant);
+    if(grant.code!==200)return grant;
+    const report=response();await h.app.openReport({body:{session:grant.body.session}},report);return report;
+  }
+  return res;
 }
 function sessionOf(res) {
   const found=/window\.SPRAVKA_BITRIX=({"session":"[^"]+"})/.exec(res.body);
@@ -100,7 +118,7 @@ test('after administrator pairing an allowed non-admin can obtain a session with
   h.state.admin=false;h.state.user='19';h.state.calls=[];
   const token=sessionOf(await login(h));
   assert.equal(h.state.record,record);
-  assert.ok(!h.state.calls.some(call=>call.url.includes('user.admin')));
+  assert.ok(h.state.calls.some(call=>call.url.includes('user.admin')));
   assert.equal(await h.app.authorize(sessionRequest(token)),true);
 });
 
@@ -129,7 +147,7 @@ test('forged or rotated application token/member ID never overwrites an installa
 
 test('disabled integration can be paired safely but never emits a report session',async()=>{
   const h=harness({env:{SPRAVKA_B24_ENABLED:'0'}}),res=await login(h);
-  assert.equal(res.code,200);assert.match(res.body,/пока выключен/);
+  assert.equal(res.code,200);assert.match(res.body,/Вход сотрудников выключен/);
   assert.ok(h.state.record);assert.ok(!res.body.includes('SPRAVKA_BITRIX='));
   assert.equal(await h.app.authorize(sessionRequest('b24.'+'a'.repeat(43))),false);
 });
@@ -183,7 +201,7 @@ test('each request revalidates access; outages do not leak upstream secrets or c
   const before=h.state.calls.length;
   assert.equal(await h.app.authorize(sessionRequest(token)),true);
   assert.equal(await h.app.authorize(sessionRequest(token)),true);
-  assert.equal(h.state.calls.length-before,4);
+  assert.equal(h.state.calls.length-before,6); // app.info, user.current and user.get, twice.
   h.state.unavailable=true;
   await assert.rejects(h.app.authorize(sessionRequest(token)),error=>error.status===503&&!error.message.includes(oauth));
   assert.ok(!(await login(h)).body.includes(oauth));

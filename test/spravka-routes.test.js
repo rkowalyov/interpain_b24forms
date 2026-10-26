@@ -47,6 +47,16 @@ test('Node.js serves /spravka, local font and protected API without external hos
   assert.deepEqual(await health.json(), { ok: true });
   const source = await fetch(root + '/lib/bitrix-spravka.js');
   assert.equal(source.status, 404);
+  for(const privatePath of ['/spravka-admin.html','/lib/bitrix-spravka-settings.js','/release.json',
+    '/spravka-admin%2ehtml','/%73pravka-admin.html','/%6cib/bitrix-spravka-settings%2ejs',
+    '/server%2ejs','/%74est/spravka-admin.test%2ejs','/release%2ejson']){
+    assert.equal((await fetch(root+privatePath)).status,404);
+  }
+  const admin=await fetch(root+'/api/spravka/bitrix/admin/state',{
+    headers:{Origin:'https://forms.eduinterpain.ru',Authorization:'Basic '+Buffer.from('report:local-test-password-123').toString('base64')}
+  });
+  assert.equal(admin.status,503); // Unconfigured integration, never password-authorized management.
+  assert.equal(admin.headers.get('access-control-allow-origin'),null);
   const entry = await fetch(root + '/spravka/bitrix', {
     method:'POST', headers:{Origin:'https://interpain.bitrix24.ru','Content-Type':'application/x-www-form-urlencoded'},
     body:'AUTH_ID=fixture-token-never-disclosed'
