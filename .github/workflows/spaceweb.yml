@@ -1,0 +1,135 @@
+name: SpaceWeb manual release
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "check: no changes; deploy: release a commit; rollback: previous release"
+        type: choice
+        options:
+          - check
+          - deploy
+          - rollback
+        default: check
+        required: true
+      commit_sha:
+        description: "For deploy only: full 40-character commit SHA, never a branch name"
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: spaceweb-production
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main' && github.actor == 'rkowalyov'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      commit_sha: ${{ steps.validate.outputs.commit_sha }}
+    steps:
+      - name: Checkout trusted deployment tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: control
+      - name: Validate requested action and exact commit
+        id: validate
+        env:
+          RELEASE_ACTION: ${{ inputs.action }}
+          RELEASE_COMMIT: ${{ inputs.commit_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$RELEASE_ACTION" in check|deploy|rollback) ;; *) exit 1 ;; esac
+          if [[ "$RELEASE_ACTION" == deploy ]]; then
+            [[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]] || {
+              echo "Deploy requires a full lowercase commit SHA"; exit 1;
+            }
+            printf 'commit_sha=%s\n' "$RELEASE_COMMIT" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Test deployment safety tooling
+        run: python3 -m unittest discover -s control/deploy/spaceweb/tests -v
+      - name: Checkout selected application commit
+        if: inputs.action == 'deploy'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ steps.validate.outputs.commit_sha }}
+          persist-credentials: false
+          path: source
+      - name: Set up Node.js
+        if: inputs.action == 'deploy'
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Test the exact application commit without deployment credentials
+        if: inputs.action == 'deploy'
+        working-directory: source
+        env:
+          EXPECTED_COMMIT: ${{ steps.validate.outputs.commit_sha }}
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run test:unit
+
+  connect:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: spaceweb-production
+    steps:
+      - name: Checkout trusted deployment tooling
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          path: control
+      - name: Checkout selected application commit
+        if: inputs.action == 'deploy'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.verify.outputs.commit_sha }}
+          persist-credentials: false
+          path: source
+      - name: Run the explicitly approved operation over pinned SSH
+        shell: bash
+        env:
+          RELEASE_ACTION: ${{ inputs.action }}
+          RELEASE_COMMIT: ${{ needs.verify.outputs.commit_sha }}
+          DEPLOY_SSH_KEY: ${{ secrets.SPACEWEB_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.SPACEWEB_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_SSH_KEY" && test -n "$DEPLOY_KNOWN_HOSTS"
+          ssh_dir="$(mktemp -d "$RUNNER_TEMP/spaceweb-ssh.XXXXXX")"
+          trap 'rm -rf "$ssh_dir"' EXIT
+          chmod 700 "$ssh_dir"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$ssh_dir/key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$ssh_dir/known_hosts"
+          chmod 600 "$ssh_dir/key" "$ssh_dir/known_hosts"
+          ssh_args=(-i "$ssh_dir/key" -o BatchMode=yes -o IdentitiesOnly=yes
+            -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$ssh_dir/known_hosts"
+            -o ConnectTimeout=15 -o ServerAliveInterval=15 -o ServerAliveCountMax=3)
+          case "$RELEASE_ACTION" in
+            check|rollback)
+              ssh "${ssh_args[@]}" b24deploy@194.226.99.172 "$RELEASE_ACTION"
+              ;;
+            deploy)
+              [[ "$RELEASE_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+              test "$(git -C source rev-parse HEAD)" = "$RELEASE_COMMIT"
+              python3 control/deploy/spaceweb/package_release.py \
+                source "$RELEASE_COMMIT" "$RUNNER_TEMP/spaceweb-release.tar.gz"
+              ssh "${ssh_args[@]}" b24deploy@194.226.99.172 \
+                "deploy $RELEASE_COMMIT" < "$RUNNER_TEMP/spaceweb-release.tar.gz"
+              ;;
+            *) exit 1 ;;
+          esac
+          printf 'SpaceWeb operation completed: **%s**\n' "$RELEASE_ACTION" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$RELEASE_ACTION" == deploy ]]; then
+            printf 'Commit: `%s`\n' "$RELEASE_COMMIT" >> "$GITHUB_STEP_SUMMARY"
+          fi

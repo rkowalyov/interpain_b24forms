@@ -10,3 +10,5 @@ coverage/
 # Local secrets
 .env.local
 .env.*.local
+__pycache__/
+*.py[cod]
