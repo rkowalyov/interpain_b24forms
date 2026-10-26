@@ -10,7 +10,7 @@ const source = html.match(/<script id="spravka-text">([\s\S]*?)<\/script>/);
 assert.ok(source, 'Inline text formatter must be present');
 const sandbox = { module: { exports: {} } };
 vm.runInNewContext(source[1], sandbox);
-const { formatEvent, formatReport } = sandbox.module.exports;
+const { formatEvent, formatReport, formatSelectedReport } = sandbox.module.exports;
 const event = {
   id: 323, code: '26_11_07-08', title: 'ИЛБ под УЗ навигацией (Краснодар)',
   city: 'Краснодар', counts: { paid: 9, checkIndividual: 6, checkCompany: 0, declined: 0 }
@@ -71,4 +71,23 @@ test('empty report formatting does not invent an event or payment lines', () => 
   const text = formatReport({ ...data, events: [] });
   assert.match(text, /^СПРАВКА/);
   assert.doesNotMatch(text, /Оплачено|323/);
+});
+
+test('selection copies only chosen events in report order, not selection order', () => {
+  const next = { ...event, id: 245, title: 'Другое мероприятие' };
+  const third = { ...event, id: 301, title: 'Третье мероприятие' };
+  const report = { ...data, events: [event,next,third] };
+  const one = formatSelectedReport(report,new Set(['245']));
+  assert.ok(one.includes('245 |'));
+  assert.ok(!one.includes('323 |') && !one.includes('301 |'));
+  const many = formatSelectedReport(report,new Set([301,323]));
+  assert.ok(many.indexOf('323 |') < many.indexOf('301 |'));
+  assert.ok(!many.includes('245 |'));
+});
+
+test('empty and obsolete selections never default to exporting all events', () => {
+  for (const selection of [[],new Set(),['999']]) {
+    assert.throws(() => formatSelectedReport(data,selection));
+  }
+  assert.match(formatSelectedReport(data,['323'],true),/предыдущая справка/);
 });
