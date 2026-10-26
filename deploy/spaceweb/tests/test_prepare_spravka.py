@@ -26,6 +26,7 @@ class SetupTests(unittest.TestCase):
         self.dropin = self.root / "service.d" / "40-spravka-bitrix.conf"
         self.old = str(self.legacy)
         self.envs = [self.old]
+        self.env_separator = " "
         self.pid = "123"
         self.calls = []
         for name, value in {
@@ -54,7 +55,9 @@ class SetupTests(unittest.TestCase):
         return {
             "User": "www-data", "ActiveState": "active", "MainPID": self.pid,
             "WorkingDirectory": str(self.original),
-            "EnvironmentFiles": " ".join(f"{p} (ignore_errors=no)" for p in self.envs),
+            "EnvironmentFiles": self.env_separator.join(
+                f"{p} (ignore_errors=no)" for p in self.envs
+            ),
         }[name]
 
     def run_command(self, args):
@@ -85,6 +88,30 @@ class SetupTests(unittest.TestCase):
         m.setup(apply=True)
         self.assertEqual(self.config.stat().st_mtime_ns, before)
         self.assertEqual(self.calls, [])
+
+    def test_multiline_systemctl_output_setup_and_idempotency(self):
+        self.env_separator = "\n"
+        m.setup(apply=True)
+        self.assertEqual(m.environment_files(), [self.old, str(self.config)])
+        before = self.config.stat().st_mtime_ns
+        self.calls.clear()
+        m.setup(apply=True)
+        self.assertEqual(self.config.stat().st_mtime_ns, before)
+        self.assertEqual(self.calls, [])
+
+    def test_environment_parser_accepts_whitespace_but_not_unknown_content(self):
+        first = f"{self.old} (ignore_errors=no)"
+        second = f"{self.config} (ignore_errors=yes)"
+        with patch.object(m, "prop", return_value=f"{first}\n\t{second}\n"):
+            self.assertEqual(m.environment_files(), [self.old, str(self.config)])
+        for value in (
+            f"{first}\nunexpected",
+            f"{first}\n{self.config} (ignore_errors=maybe)",
+            f"{first}\n{second} trailing",
+        ):
+            with self.subTest(value=value), patch.object(m, "prop", return_value=value):
+                with self.assertRaises(m.SetupError):
+                    m.environment_files()
 
     def test_foreign_config_fails_before_any_creation(self):
         self.config.write_text("SPRAVKA_B24_ENABLED=1\n")

@@ -82,9 +82,11 @@ def check_existing_file(path, text, mode):
 
 
 def environment_files():
-    value = prop("EnvironmentFiles")
-    matches = re.findall(r"(/[^ ]+) \(ignore_errors=(?:yes|no)\)", value)
-    if " ".join(re.findall(r"/[^ ]+ \(ignore_errors=(?:yes|no)\)", value)) != value:
+    # systemctl prints multiple entries on separate lines on Ubuntu 24.04.
+    # Normalize separators only; still reject any unrecognized entry or suffix.
+    value = " ".join(prop("EnvironmentFiles").split())
+    matches = re.findall(r"(/[^\s]+) \(ignore_errors=(?:yes|no)\)", value)
+    if " ".join(re.findall(r"/[^\s]+ \(ignore_errors=(?:yes|no)\)", value)) != value:
         raise SetupError("Неожиданный формат EnvironmentFiles.")
     return matches
 
