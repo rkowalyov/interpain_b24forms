@@ -18,8 +18,10 @@ const memberId='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const oauth='fixture-oauth-not-a-real-token-12345';
 let record={clientId:env.SPRAVKA_B24_CLIENT_ID,appId:'8',memberId,applicationToken};
 const bitrix = createBitrixSpravkaApp({env,store:{read:async()=>record,create:async r=>(record ||= r)},
+  policyStore:{read:async()=>({version:1,revision:0,enabled:true,allowedUserIds:['17'],cacheSeconds:60})},
   fetchImpl:async url=>({ok:true,status:200,text:async()=>JSON.stringify({result:url.includes('app.info')?
-    {ID:8,CODE:env.SPRAVKA_B24_CLIENT_ID,STATUS:'L',INSTALLED:true}:{ID:17,ACTIVE:true}})})});
+    {ID:8,CODE:env.SPRAVKA_B24_CLIENT_ID,STATUS:'L',INSTALLED:true}:
+      url.includes('user.admin')?false:url.includes('user.get')?[{ID:17,ACTIVE:true,USER_TYPE:'employee'}]:{ID:17,ACTIVE:true}})})});
 const statuses=[{ENTITY_ID:'DYNAMIC_1036_STAGE_1',STATUS_ID:'REAL',NAME:'Реализация'},
   ...Object.entries(GROUPS).flatMap(([key,names])=>names.map((NAME,i)=>({ENTITY_ID:'DEAL_STAGE',STATUS_ID:key+i,NAME})))];
 const fields={code:{title:'Кодовое обозначение'},ufCrm21EventAddr:{title:'Адрес'}};

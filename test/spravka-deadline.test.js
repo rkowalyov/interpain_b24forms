@@ -28,10 +28,12 @@ test('one 55s deadline includes real OAuth identity and the subsequent CRM scan'
   const appEnv={...env,SPRAVKA_B24_ENABLED:'1',SPRAVKA_B24_CLIENT_ID:'local.fixture-client'};
   const record={clientId:appEnv.SPRAVKA_B24_CLIENT_ID,memberId:'a'.repeat(32),applicationToken:'fixture-application-token',appId:'8'};
   const app=createBitrixSpravkaApp({env:appEnv,now:()=>clock,store:{read:async()=>record},
+    policyStore:{read:async()=>({version:1,revision:0,enabled:true,allowedUserIds:['17'],cacheSeconds:60})},
     fetchImpl:async url=>{
       clock+=oauthCost;
       return {ok:true,status:200,text:async()=>JSON.stringify({result:url.includes('app.info')?
-        {ID:8,CODE:appEnv.SPRAVKA_B24_CLIENT_ID,STATUS:'L',INSTALLED:true}:{ID:17,ACTIVE:true}})};
+        {ID:8,CODE:appEnv.SPRAVKA_B24_CLIENT_ID,STATUS:'L',INSTALLED:true}:
+          url.includes('user.get')?[{ID:17,ACTIVE:true,USER_TYPE:'employee'}]:{ID:17,ACTIVE:true}})};
     }});
   const entry=response();
   await app.entry({query:{DOMAIN:'interpain.bitrix24.ru'},body:{

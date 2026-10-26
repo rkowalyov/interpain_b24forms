@@ -93,9 +93,14 @@ const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
 app.use(limiter);
 
 // The root is also the source checkout: never serve server code or deployment files.
-app.use(['/lib', '/deploy', '/scripts', '/test', '/node_modules', '/.git'], (req, res) => res.sendStatus(404));
 app.use((req, res, next) => {
-  if (/\.(?:env|md|json|js|ya?ml|conf|service|lock)$/i.test(req.path)) {
+  // express.static decodes and normalizes URLs. Apply the same interpretation
+  // before denying source/private pages, including %2e and encoded directories.
+  let pathname;
+  try { pathname = path.posix.normalize(decodeURIComponent(req.path).replace(/\\/g, '/')).toLowerCase(); }
+  catch { return res.sendStatus(404); }
+  if (/^\/(?:lib|deploy|scripts|test|node_modules|\.git|spravka-admin\.html)(?:\/|$)/.test(pathname) ||
+      /\.(?:env|md|json|js|ya?ml|conf|service|lock)$/.test(pathname)) {
     return res.sendStatus(404);
   }
   next();
@@ -126,11 +131,15 @@ app.get('/api/loader', require('./api/loader'));
 const bitrixSpravkaApp = createBitrixSpravkaApp();
 // One shared report/cache; Basic is checked first and never depends on OAuth availability.
 app.all('/api/spravka', createSpravkaHandler({
-  authorize: (req, env, context) => authorized(req, env) || bitrixSpravkaApp.authorize(req, context)
+  authorize: (req, env, context) => authorized(req, env) || bitrixSpravkaApp.authorize(req, context),
+  revalidate: (req, env) => authorized(req, env) || bitrixSpravkaApp.revalidate(req),
+  cacheTtl: bitrixSpravkaApp.cacheTtl
 }));
 app.post('/spravka/bitrix', express.urlencoded({ extended: false, limit: '32kb' }), bitrixSpravkaApp.entry);
 app.get('/spravka/bitrix', (req, res) => res.redirect(303, '/spravka'));
 app.post('/api/spravka/bitrix/logout', bitrixSpravkaApp.logout);
+app.all('/api/spravka/bitrix/admin/:action', bitrixSpravkaApp.admin);
+app.post('/spravka/bitrix/report', express.urlencoded({ extended: false, limit: '4kb' }), bitrixSpravkaApp.openReport);
 app.get(['/spravka', '/spravka/'], (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
   res.sendFile(path.join(__dirname, 'spravka.html'));
@@ -165,7 +174,7 @@ app.post('/api/lead', async (req, res) => {
 app.post('/api/calendar-webhook', createCalendarWebhookHandler());
 
 app.use((err, req, res, next) => {
-  if (req.path === '/spravka/bitrix' || req.path === '/api/spravka/bitrix/logout') {
+  if (req.path.startsWith('/spravka/bitrix') || req.path.startsWith('/api/spravka/bitrix/')) {
     // Body-parser errors can include a fragment of the credential-bearing body.
     return res.status(err.status === 413 ? 413 : 400).json({ error: 'Не удалось обработать запрос приложения.' });
   }

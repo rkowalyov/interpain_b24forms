@@ -22,13 +22,18 @@ const report = {
 
 async function scenario(mode = 'disabled', legacy = false) {
   const env = { SPRAVKA_B24_CLIENT_ID: 'local.fixture-client', SPRAVKA_B24_ENABLED: mode === 'enabled' ? '1' : '0' };
-  let record = null;
+  let record = mode === 'enabled' ? {
+    clientId: env.SPRAVKA_B24_CLIENT_ID, appId: '8', memberId: 'a'.repeat(32),
+    applicationToken: 'fixture-application-token-123456'
+  } : null;
   const app = createBitrixSpravkaApp({
     env, store: { read: async () => record, create: async value => (record ||= value) },
+    policyStore: { read: async () => ({version:1,revision:0,enabled:true,allowedUserIds:['17'],cacheSeconds:60}) },
     fetchImpl: async url => ({
       ok: true, status: 200, text: async () => JSON.stringify({ result:
         url.includes('app.info') ? { ID: 8, CODE: env.SPRAVKA_B24_CLIENT_ID, STATUS: 'L', INSTALLED: true } :
-          url.includes('user.current') ? { ID: 17, ACTIVE: true } : true
+          url.includes('user.current') ? { ID: 17, ACTIVE: true } :
+          url.includes('user.get') ? [{ ID:17,ACTIVE:true,USER_TYPE:'employee' }] : mode !== 'enabled'
       })
     })
   });

@@ -11,7 +11,9 @@ import tarfile
 
 ROOT_FILES = {"server.js", "package.json", "package-lock.json"}
 RUNTIME_DIRS = {"api", "lib", "assets", "scenarios"}
-REQUIRED = ROOT_FILES | {"spravka.html", "lib/bitrix-event-api.js", "lib/bitrix-spravka.js"}
+REQUIRED = ROOT_FILES | {"spravka.html", "spravka-admin.html", "lib/bitrix-event-api.js",
+                         "lib/bitrix-spravka.js", "lib/bitrix-spravka-app.js",
+                         "lib/bitrix-spravka-settings.js"}
 
 
 def allowed(name):
