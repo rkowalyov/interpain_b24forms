@@ -257,6 +257,24 @@ class GatewayTests(unittest.TestCase):
 
 
 class BootstrapTests(unittest.TestCase):
+    def test_build_user_cannot_replace_forced_command_authorized_key(self):
+        with tempfile.TemporaryDirectory() as directory:
+            home = pathlib.Path(directory) / "deploy-user"
+            home.mkdir()
+            key = "ssh-ed25519 AAAA test-public-key"
+            with mock.patch.object(installer, "HOME", home), \
+                    mock.patch.object(installer.os, "chown") as chown:
+                installer.install_authorized_key(key)
+            authorized = home / ".ssh" / "authorized_keys"
+            self.assertEqual(home.stat().st_mode & 0o777, 0o755)
+            self.assertEqual(authorized.parent.stat().st_mode & 0o777, 0o755)
+            self.assertEqual(authorized.stat().st_mode & 0o777, 0o644)
+            self.assertTrue(authorized.read_text().startswith("restrict,command="))
+            self.assertIn('\\"$SSH_ORIGINAL_COMMAND\\"', authorized.read_text())
+            self.assertEqual(chown.call_args_list, [
+                mock.call(home, 0, 0), mock.call(home / ".ssh", 0, 0),
+                mock.call(authorized, 0, 0)])
+
     def test_public_key_validation_never_accepts_a_private_key_or_multiple_keys(self):
         wire = b"\x00\x00\x00\x0bssh-ed25519\x00\x00\x00\x20" + b"x" * 32
         key = "ssh-ed25519 " + base64.b64encode(wire).decode() + " test-deployment"

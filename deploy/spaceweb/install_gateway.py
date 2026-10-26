@@ -36,6 +36,23 @@ def public_key(value):
     return " ".join(parts)
 
 
+def install_authorized_key(key):
+    """Build processes must not be able to replace the forced-command SSH key."""
+    ssh_directory = HOME / ".ssh"
+    HOME.mkdir(mode=0o755, exist_ok=True)
+    HOME.chmod(0o755)
+    ssh_directory.mkdir(mode=0o755)
+    authorized = ssh_directory / "authorized_keys"
+    forced = (
+        'restrict,command="/usr/bin/sudo -n /usr/local/sbin/interpain-release '
+        '\\"$SSH_ORIGINAL_COMMAND\\"" ' + key + "\n"
+    )
+    authorized.write_text(forced)
+    authorized.chmod(0o644)
+    for item in (HOME, ssh_directory, authorized):
+        os.chown(item, 0, 0)
+
+
 def install(key):
     if os.geteuid() != 0:
         raise ValueError("Run this one-time installer as root")
@@ -70,11 +87,6 @@ def install(key):
     if len(host) < 2 or host[0] != "ssh-ed25519":
         raise ValueError("Expected public Ed25519 host key is unavailable")
     run(["/usr/sbin/visudo", "-cf", "/etc/sudoers"])
-    ssh_directory = HOME / ".ssh"
-    forced = (
-        'restrict,command="/usr/bin/sudo -n /usr/local/sbin/interpain-release '
-        '\\"$SSH_ORIGINAL_COMMAND\\"" ' + key + "\n"
-    )
     rule = "b24deploy ALL=(root) NOPASSWD: /usr/local/sbin/interpain-release *\n"
     with tempfile.NamedTemporaryFile("w", prefix="interpain-sudoers-", delete=False) as temporary:
         temporary.write(rule)
@@ -82,16 +94,10 @@ def install(key):
     try:
         candidate.chmod(0o440)
         run(["/usr/sbin/visudo", "-cf", str(candidate)])
-        run(["/usr/sbin/useradd", "--create-home", "--home-dir", str(HOME),
+        # No user-writable shell startup files from /etc/skel.
+        run(["/usr/sbin/useradd", "--no-create-home", "--home-dir", str(HOME),
              "--shell", "/bin/bash", USER])
-        account = pwd.getpwnam(USER)
-        HOME.chmod(0o700)
-        ssh_directory.mkdir(mode=0o700)
-        authorized = ssh_directory / "authorized_keys"
-        authorized.write_text(forced)
-        authorized.chmod(0o600)
-        for item in (HOME, ssh_directory, authorized):
-            os.chown(item, account.pw_uid, account.pw_gid)
+        install_authorized_key(key)
         BUILD_HOME.mkdir(mode=0o700)
         shutil.chown(BUILD_HOME, user=USER, group=USER)
         shutil.copyfile(source, GATEWAY)
