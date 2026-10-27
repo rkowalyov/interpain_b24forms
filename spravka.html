@@ -26,6 +26,9 @@
     label{display:block;font-size:var(--text-sm);margin-top:var(--space-5);margin-bottom:var(--space-2)}
     input{width:100%;padding:var(--space-3);border:1px solid var(--color-border);border-radius:5px;min-height:48px}
     .login button{width:100%;margin-top:var(--space-6)}.error{color:var(--color-error)}
+    .session-actions{display:flex;flex-direction:column;gap:var(--space-3);margin-top:var(--space-6)}
+    .session-actions a{display:block;text-align:center;min-height:44px;padding:var(--space-2) var(--space-4);border-radius:6px;background:var(--color-primary);color:white;text-decoration:none;font-size:var(--text-sm)}
+    .session-actions a:hover{background:var(--color-primary-hover)}.session-actions button{margin-top:0}
     .tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-6)}.actions{display:flex;flex-wrap:wrap;gap:var(--space-2)}
     .meta{font-size:var(--text-sm);color:var(--color-text-muted)}.meta strong{color:var(--color-text);font-weight:500}
     .message{padding:var(--space-5);background:var(--color-surface);border:1px solid var(--color-border);border-radius:6px;margin-bottom:var(--space-6);font-size:var(--text-sm)}
@@ -66,6 +69,15 @@
   <a class="skip" href="#main" data-testid="link-skip">К справке</a>
   <header><div class="bar"><div><h1>СПРАВКА</h1><div class="sub">Мероприятия · стадия «Реализация»</div></div><span class="meta">Битрикс24</span></div></header>
   <main id="main">
+    <section id="session-ended" class="login" hidden aria-labelledby="session-title">
+      <h2 id="session-title" tabindex="-1">Сессия завершена</h2>
+      <p id="session-description">Войдите через Битрикс24 заново, чтобы продолжить работу со справкой. Данные с этой страницы удалены.</p>
+      <div class="session-actions">
+        <a id="session-reenter" href="https://interpain.bitrix24.ru/marketplace/app/445/" target="_top" data-testid="link-session-reenter">Войти через Битрикс24</a>
+        <button type="button" id="session-password" data-testid="button-session-password">Войти по резервному паролю</button>
+      </div>
+      <p>Если после повторного входа доступ не появится, обратитесь к администратору.</p>
+    </section>
     <section id="login" class="login" aria-labelledby="login-title">
       <h2 id="login-title">Вход в справку</h2>
       <p>Используйте доступ к отчёту. Это не пароль от Битрикс24.</p>
@@ -161,6 +173,17 @@
         if (cls) element.className = cls;
         return element;
       };
+      function endBitrixSession(status) {
+        bitrixSession = ''; auth = ''; reportData = null; selectedIds.clear(); stale = false;
+        resetCopyState(); $('events').replaceChildren(); $('updated').textContent = '';
+        $('password').value = ''; $('notice').hidden = true; $('login-error').textContent = '';
+        $('report').hidden = true; $('login').hidden = true;
+        $('session-title').textContent = status === 403 ? 'Доступ не подтверждён' : 'Сессия завершена';
+        $('session-description').textContent = status === 403
+          ? 'Не удалось подтвердить ваш доступ к справке. Попробуйте войти через Битрикс24 заново или обратитесь к администратору. Данные с этой страницы удалены.'
+          : 'Войдите через Битрикс24 заново, чтобы продолжить работу со справкой. Данные с этой страницы удалены.';
+        $('session-ended').hidden = false; $('session-title').focus();
+      }
       function syncCopyButtons() {
         const events = reportData?.events || [];
         const count = events.filter(event => selectedIds.has(String(event.id))).length;
@@ -282,6 +305,7 @@
           const response = await fetch(api + (refresh ? '?refresh=1' : ''), {headers:{Authorization:auth},cache:'no-store',credentials:'omit',signal:AbortSignal.timeout(65000)});
           const data = await response.json().catch(() => ({}));
           if (!response.ok) {
+            if (bitrixSession && [401,403].includes(response.status)) { endBitrixSession(response.status); return; }
             if (response.status === 401) { auth = ''; bitrixSession = ''; reportData = null; selectedIds.clear(); resetCopyState(); $('events').replaceChildren(); $('updated').textContent = ''; $('report').hidden = true; $('login').hidden = false; }
             throw new Error(data.error || 'Не удалось загрузить справку.');
           }
@@ -307,6 +331,9 @@
         const bytes = new TextEncoder().encode(`${$('username').value}:${$('password').value}`);
         auth = 'Basic ' + btoa(Array.from(bytes, byte => String.fromCharCode(byte)).join(''));
         load();
+      });
+      $('session-password').addEventListener('click',() => {
+        $('session-ended').hidden = true; $('login').hidden = false; $('password').focus();
       });
       $('refresh').addEventListener('click',() => load(true));
       $('copy-all').addEventListener('click',() => {
