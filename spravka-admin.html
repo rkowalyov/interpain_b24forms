@@ -69,6 +69,16 @@
       <button role="tab" id="tab-service" aria-controls="service" aria-selected="false" tabindex="-1" data-tab="service" data-testid="tab-service">Обслуживание</button>
     </nav>
   </header>
+  <section class="wrap" id="session-ended" hidden aria-labelledby="session-title" style="padding-block:var(--space-6)">
+    <div class="panel panel-pad">
+      <h2 id="session-title" tabindex="-1">Сессия завершена</h2>
+      <p>Заново откройте приложение через Битрикс24. Список сотрудников и несохранённые изменения удалены с этой страницы; сохранённые настройки на сервере не изменились.</p>
+      <div class="dialog-actions" style="justify-content:flex-start">
+        <a href="https://interpain.bitrix24.ru/marketplace/app/445/" target="_top" class="button primary" data-testid="link-session-reenter">Войти через Битрикс24</a>
+        <a href="https://forms.eduinterpain.ru/spravka" target="_blank" rel="noopener noreferrer">Справка по резервному паролю</a>
+      </div>
+    </div>
+  </section>
   <main class="wrap" id="main">
     <div class="feedback error" id="global-error" role="alert" hidden data-testid="text-global-error"></div>
     <div class="button-group" style="margin-bottom:16px"><button id="reload" data-testid="button-reload">Обновить данные панели</button><button id="logout-admin" data-testid="button-logout-admin">Выйти из управления</button></div>
@@ -142,18 +152,28 @@
       function node(tag,text,className) {const e=document.createElement(tag); if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;}
       function notice(id,text,error=false){const e=$(id);e.textContent=text;e.classList.toggle('error',error);e.hidden=false;}
       function dirtyUsers(){return loaded && [...state.settings.allowedUserIds].sort().join('|')!==[...draftUsers].sort().join('|');}
+      function endSession(status){
+        credentials=null;loaded=false;directory.clear();draftUsers=[];picked.clear();results=[];next=null;
+        clearTimeout(searchTimer);searchGeneration++;
+        document.querySelectorAll('dialog[open]').forEach(d=>d.close());
+        $('user-list').replaceChildren();$('picker-list').replaceChildren();
+        document.querySelectorAll('input').forEach(e=>{e.value='';e.checked=false;});
+        $('actor').textContent='Сессия завершена';$('open-report').disabled=true;
+        document.querySelector('main').hidden=true;document.querySelector('nav').hidden=true;$('server-gate').hidden=true;
+        $('session-title').textContent=status===403?'Доступ к управлению не подтверждён':'Сессия завершена';
+        $('session-ended').hidden=false;$('session-title').focus();
+      }
       async function api(action,{method='GET',body}={}){
         if(!credentials?.session)throw new Error('Заново откройте приложение в Битрикс24.');
+        const startedWith=credentials;
         const response=await fetch('/api/spravka/bitrix/admin/'+action,{method,
           headers:{Authorization:'Bearer '+credentials.session,...(method!=='GET'?{'Content-Type':'application/json','X-Spravka-CSRF':credentials.csrf}:{})},
           ...(body?{body:JSON.stringify(body)}:{}),credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(65000)});
         const data=await response.json().catch(()=>({}));
+        if(credentials!==startedWith)throw new Error('Сессия завершена. Заново откройте приложение в Битрикс24.');
         if(!response.ok){
           if([401,403].includes(response.status)&&data.code!=='REPORT_NOT_ALLOWED'){
-            credentials=null;loaded=false;$('user-list').replaceChildren();$('picker-list').replaceChildren();directory.clear();
-            $('actor').textContent='Сессия завершена';$('add-users').disabled=true;$('open-report').disabled=true;
-            $('save-users').disabled=true;$('save-settings').disabled=true;$('enabled').disabled=true;$('cache').disabled=true;
-            notice('global-error','Доступ к управлению больше не подтверждён. Заново откройте приложение в Битрикс24.',true);
+            endSession(response.status);
           }
           throw new Error(data.error||'Не удалось выполнить запрос.');
         }
@@ -264,7 +284,7 @@
         if(!credentials)return;
         try{const r=await fetch('/api/spravka/bitrix/logout',{method:'POST',headers:{Authorization:'Bearer '+credentials.session},credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(10000)});if(!r.ok)throw new Error('Сервер не подтвердил выход. Повторите попытку.');}
         catch(e){showError('global-error',e);return;}
-        credentials=null;loaded=false;document.querySelector('main').replaceChildren(node('h2','Сессия управления завершена'),node('p','Заново откройте приложение из меню Битрикс24.'));
+        endSession(200);$('session-title').textContent='Вы вышли из управления';
       };
       $('open-report').onclick=async()=>{
         $('open-report').disabled=true;
